@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Frontend Application
+
+The `src` directory houses the Next.js frontend application.
+
+-   **Framework**: Next.js
+-   **Architecture**: Client-first. Minimize server-side rendering (SSR) and the use of server actions.
+-   **Server Processing**: All server-related processing should be handled by the backend API located in the `backend` directory.

@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Backend API
+
+The `backend` directory contains the Flask application that serves as the project's backend API.
+
+-   **Framework**: Flask
+-   **Purpose**: Provides API endpoints for the frontend.
+-   **Port**: Runs on port 5000.
+-   **Main file**: [app.py](mdc:backend/app.py)
