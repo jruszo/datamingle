@@ -1,0 +1,183 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# DataMingle Database & Environment Rules
+
+## Environment Setup
+
+### Conda Environment
+- **ALWAYS** activate the `datamingle` conda environment before running any backend commands
+- Required for all database operations, Flask commands, and Python development
+- Command: `conda activate datamingle`
+
+### Working Directory
+- Backend operations should be performed from the `backend/` directory
+- Database files and migrations are located in [backend/](mdc:backend)
+
+## Database Architecture
+
+### Current Configuration
+- **Development**: SQLite database at [backend/db.sqlite](mdc:backend/db.sqlite)
+- **Production**: PostgreSQL (future migration planned)
+- **ORM**: Flask-SQLAlchemy 3.1.1
+- **Migrations**: Flask-Migrate 4.1.0 (Alembic)
+
+### Database Configuration
+- Configuration is centralized in [backend/config/database.py](mdc:backend/config/database.py)
+- PostgreSQL settings are pre-configured but commented out
+- Database URI and settings are managed through DatabaseConfig class
+
+## Model Conventions
+
+### User Model Integration
+- The [User model](mdc:backend/app.py) integrates with WorkOS authentication
+- `workos_user_id` field maps to JWT 'sub' claim
+- Automatic user creation on first authentication
+- Always use `User.find_by_workos_id()` for WorkOS user lookups
+
+### Model Definition Standards
+- Models must inherit from `db.Model` (Flask-SQLAlchemy)
+- Include `__repr__()` method for debugging
+- Provide `to_dict()` method for JSON serialization
+- Use descriptive column names and appropriate data types
+- Add appropriate indexes for foreign keys and lookup fields
+
+### Timestamp Conventions
+- Include `created_at` and `updated_at` on all models
+- Use `datetime.utcnow` as default value
+- Set `onupdate=datetime.utcnow` for `updated_at` fields
+
+## Migration Workflow
+
+### Before Any Database Changes
+```bash
+conda activate datamingle
+cd backend
+```
+
+### Creating Migrations
+1. **Modify models** in [backend/app.py](mdc:backend/app.py) (or separate model files)
+2. **Generate migration**: `flask db migrate -m "Descriptive message"`
+3. **Review migration file** in [backend/migrations/versions/](mdc:backend/migrations/versions)
+4. **Apply migration**: `flask db upgrade`
+
+### Migration Message Conventions
+- Use descriptive, action-oriented messages
+- Format: `"Add ModelName table"`, `"Add field_name to ModelName"`, `"Create index on table.column"`
+- Include table/field names in the message
+
+### Migration Best Practices
+- **Never edit existing migrations** - create new ones instead
+- **Always review** auto-generated migration files before applying
+- **Test migrations** on development data first
+- **Backup database** before major migrations in production
+
+## Development Commands
+
+### Essential Flask Commands
+```bash
+# Database initialization
+flask db init          # Initialize migration repository (one-time)
+flask db migrate -m "Message"  # Create new migration
+flask db upgrade        # Apply migrations
+flask db downgrade     # Rollback migration
+flask db history       # View migration history
+flask db current       # Show current migration
+
+# Custom database commands
+flask init-db          # Create tables without migrations
+flask reset-db         # Drop and recreate all tables
+```
+
+### Database Management
+- Use migrations for all schema changes
+- Reference [DATABASE_MANAGEMENT.md](mdc:backend/DATABASE_MANAGEMENT.md) for detailed guides
+- SQLite file location: [backend/db.sqlite](mdc:backend/db.sqlite)
+
+## Authentication Integration
+
+### WorkOS User Handling
+- Users are automatically created on first authentication
+- Local user data supplements WorkOS profile information
+- Use `get_or_create_user()` function for user management
+- Update `last_login_at` on each successful authentication
+
+### User Data Flow
+1. JWT token verification via WorkOS JWKS
+2. WorkOS user profile fetch (if available)
+3. Local user lookup/creation via `workos_user_id`
+4. Request context population with user data
+
+## File Organization
+
+### Current Structure
+- **Main application**: [backend/app.py](mdc:backend/app.py)
+- **Database config**: [backend/config/database.py](mdc:backend/config/database.py)
+- **Models directory**: [backend/models/](mdc:backend/models) (prepared for future use)
+- **Migrations**: [backend/migrations/](mdc:backend/migrations)
+
+### Future Model Organization
+- Move models from [app.py](mdc:backend/app.py) to separate files in [backend/models/](mdc:backend/models)
+- Import models in [backend/models/__init__.py](mdc:backend/models/__init__.py)
+- Maintain model registration with Flask-SQLAlchemy
+
+## PostgreSQL Migration Plan
+
+### Preparation Steps
+1. Update [backend/config/database.py](mdc:backend/config/database.py) PostgreSQL configuration
+2. Install PostgreSQL driver: `pip install psycopg2-binary`
+3. Set environment variables for PostgreSQL connection
+4. Create migration: `flask db migrate -m "Switch to PostgreSQL"`
+
+### Environment Variables (Future)
+- `POSTGRES_USER`: Database username
+- `POSTGRES_PASSWORD`: Database password
+- `POSTGRES_HOST`: Database host
+- `POSTGRES_PORT`: Database port (default: 5432)
+- `POSTGRES_DB`: Database name
+
+## Error Handling & Troubleshooting
+
+### Common Issues
+- **"No changes in schema detected"**: Ensure models inherit from `db.Model` and are imported
+- **Import errors**: Check circular imports between models and app
+- **Migration conflicts**: Use `flask db merge` or create new migration
+
+### Database Reset (Development Only)
+```bash
+rm -rf migrations/
+rm db.sqlite
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+```
+
+## Code Quality Standards
+
+### Database Queries
+- Use model class methods for common queries
+- Implement proper error handling for database operations
+- Use transactions for multi-step operations
+- Avoid N+1 query problems with proper joins/eager loading
+
+### Security Considerations
+- Validate all user input before database operations
+- Use parameterized queries (handled by SQLAlchemy)
+- Implement proper access controls for admin operations
+- Sanitize data in `to_dict()` methods
+
+## Testing Guidelines
+
+### Database Testing
+- Use separate test database
+- Reset database state between tests
+- Test migration up and down operations
+- Verify model relationships and constraints
+
+### Authentication Testing
+- Test user creation with WorkOS data
+- Verify JWT token handling
+- Test user lookup and update operations
+- Validate error handling for invalid tokens

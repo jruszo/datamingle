@@ -1,0 +1,220 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# DataMingle Development Conventions
+
+## Project Structure
+
+### Frontend (Next.js)
+- **Main application**: [src/app/](mdc:src/app) - App Router structure
+- **Components**: [src/components/](mdc:src/components) - Reusable UI components
+- **Styles**: [src/styles/](mdc:src/styles) - Global styles and Tailwind config
+- **Hooks**: [src/hooks/](mdc:src/hooks) - Custom React hooks
+- **Libraries**: [src/lib/](mdc:src/lib) - Utility functions and configurations
+
+### Backend (Flask)
+- **Main application**: [backend/app.py](mdc:backend/app.py) - Flask application entry point
+- **Configuration**: [backend/config/](mdc:backend/config) - Database and app configuration
+- **Models**: [backend/models/](mdc:backend/models) - Database models (future organization)
+- **Requirements**: [backend/requirements.txt](mdc:backend/requirements.txt) - Python dependencies
+
+### Environment Configuration
+- **Root environment**: [.env](mdc:.env) - Shared environment variables
+- **Example file**: [.env.example](mdc:.env.example) - Template for environment setup
+- **Backend example**: [backend/env.example](mdc:backend/env.example) - Backend-specific variables
+
+## Development Environment
+
+### Required Tools
+- **Conda**: Environment management with `datamingle` environment
+- **Node.js**: For Next.js frontend development
+- **Python 3.x**: For Flask backend development
+
+### Environment Activation
+```bash
+# For backend development
+conda activate datamingle
+cd backend
+
+# For frontend development
+npm install  # if dependencies changed
+npm run dev  # start development server
+```
+
+## Authentication Flow
+
+### WorkOS Integration
+- Authentication handled through WorkOS SSO
+- JWT tokens used for API authentication
+- User data synchronized between WorkOS and local database
+- Reference: [WORKOS_SETUP.md](mdc:WORKOS_SETUP.md) for configuration
+
+### API Authentication
+- All protected routes require `Authorization: Bearer <token>` header
+- JWT verification with WorkOS JWKS endpoint
+- Automatic user creation/update on token verification
+- User context available in request object after authentication
+
+## Code Organization
+
+### Backend Route Structure
+- **Public routes**: No authentication required
+- **Protected routes**: Use `@with_auth` decorator
+- **API endpoints**: Prefix with `/api/` (if implementing API versioning)
+- **Health check**: Always include `/health` endpoint
+
+### Error Handling
+- Return consistent JSON error responses
+- Include appropriate HTTP status codes
+- Provide helpful error messages for debugging
+- Log errors for monitoring and debugging
+
+### Configuration Management
+- Use environment variables for sensitive data
+- Centralize configuration in config classes
+- Separate development/production configurations
+- Never commit secrets to version control
+
+## API Design Conventions
+
+### Response Format
+```json
+{
+  "success": true,
+  "data": {...},
+  "message": "Optional message",
+  "meta": {
+    "pagination": {...},
+    "timestamp": "2023-..."
+  }
+}
+```
+
+### Error Response Format
+```json
+{
+  "error": "Error type",
+  "message": "Human-readable error message",
+  "authenticated": false,
+  "details": {...}
+}
+```
+
+### HTTP Status Codes
+- `200`: Success
+- `201`: Created
+- `400`: Bad Request
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Not Found
+- `500`: Internal Server Error
+
+## Security Guidelines
+
+### Environment Variables
+- Store sensitive data in [.env](mdc:.env) file
+- Use strong, unique values for secrets
+- Rotate API keys and passwords regularly
+- Document required environment variables in [.env.example](mdc:.env.example)
+
+### CORS Configuration
+- Whitelist specific frontend domains
+- Enable credentials for cookie/session support
+- Restrict allowed methods and headers as needed
+- Review CORS settings before production deployment
+
+### Input Validation
+- Validate all user inputs
+- Sanitize data before database operations
+- Use type hints and validation libraries
+- Implement rate limiting for API endpoints
+
+## Version Control
+
+### Git Conventions
+- Use descriptive commit messages
+- Follow conventional commit format when possible
+- Create feature branches for new development
+- Keep commits focused and atomic
+
+### Branch Strategy
+- `main`: Production-ready code
+- `develop`: Integration branch for features
+- `feature/*`: Individual feature development
+- `hotfix/*`: Critical production fixes
+
+### Ignore Patterns
+- Environment files (`.env`)
+- Database files (`*.sqlite`)
+- Build artifacts (`dist/`, `build/`)
+- Dependencies (`node_modules/`, `__pycache__/`)
+- IDE files (`.vscode/`, `.idea/`)
+
+## Documentation
+
+### Code Documentation
+- Use docstrings for all functions and classes
+- Include type hints where appropriate
+- Document complex business logic
+- Keep README files updated
+
+### API Documentation
+- Document all endpoints and parameters
+- Include example requests and responses
+- Specify authentication requirements
+- Maintain changelog for API changes
+
+## Testing Strategy
+
+### Backend Testing
+- Unit tests for models and utility functions
+- Integration tests for API endpoints
+- Authentication flow testing
+- Database migration testing
+
+### Frontend Testing
+- Component unit tests
+- Integration tests for user flows
+- Authentication state testing
+- API integration testing
+
+## Deployment Considerations
+
+### Environment Separation
+- Development: Local SQLite, local WorkOS app
+- Staging: PostgreSQL, staging WorkOS environment
+- Production: Production PostgreSQL, production WorkOS
+
+### Database Migration
+- Test migrations in staging environment
+- Backup production database before migrations
+- Use blue-green deployment for zero downtime
+- Monitor application after database changes
+
+### Monitoring
+- Log authentication events
+- Monitor database performance
+- Track API response times
+- Set up error alerting
+
+## Performance Guidelines
+
+### Database Optimization
+- Use appropriate indexes on lookup fields
+- Implement query optimization for large datasets
+- Use database connection pooling
+- Monitor slow queries
+
+### Frontend Optimization
+- Implement proper code splitting
+- Use React.memo for expensive components
+- Optimize images and static assets
+- Implement proper caching strategies
+
+### API Optimization
+- Implement response caching where appropriate
+- Use compression for large responses
+- Implement pagination for list endpoints
+- Monitor and optimize slow endpoints

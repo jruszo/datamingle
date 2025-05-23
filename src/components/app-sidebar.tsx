@@ -44,16 +44,22 @@ import {
 const data = {
   navMain: [
     {
-      title: "Getting Started",
+      title: "Tests",
       url: "#",
       items: [
         {
-          title: "Installation",
-          url: "#",
+          title: "Test Backend",
+          url: "/backend/test",
         },
+      ],
+    },
+    {
+      title: "Inventory",
+      url: "#",
+      items: [
         {
-          title: "Project Structure",
-          url: "#",
+          title: "Instances",
+          url: "/inventory/instances",
         },
       ],
     },
