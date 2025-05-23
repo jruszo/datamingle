@@ -1,0 +1,134 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Frontend API Usage Rules
+
+## Primary API Hook
+**ALWAYS use [use-api.ts](mdc:src/hooks/use-api.ts) for authenticated API calls.**
+
+```tsx
+import { useAuthenticatedApi } from "@/hooks/use-api";
+
+export function MyComponent() {
+  const { apiCall, isTokenLoading, hasToken } = useAuthenticatedApi();
+  
+  const fetchData = async () => {
+    const result = await apiCall<ResponseType>('/endpoint');
+    if (result.ok) {
+      // Handle success: result.data
+    } else {
+      // Handle error: result.error
+    }
+  };
+}
+```
+
+## API Call Patterns
+
+### GET Requests
+```tsx
+// Simple GET
+const result = await apiCall('/users');
+
+// With query params
+const result = await apiCall('/users?page=1&limit=10');
+
+// With TypeScript typing
+const result = await apiCall<User[]>('/users');
+```
+
+### POST/PUT/PATCH Requests
+```tsx
+// POST with body
+const result = await apiCall('/users', {
+  method: 'POST',
+  body: { name: 'John', email: 'john@example.com' }
+});
+
+// PUT request
+const result = await apiCall('/users/123', {
+  method: 'PUT',
+  body: { name: 'Updated Name' }
+});
+```
+
+### Error Handling Pattern
+```tsx
+const result = await apiCall('/endpoint');
+
+if (result.ok && result.data) {
+  // Success case
+  setData(result.data);
+} else {
+  // Error case
+  setError(result.error || 'Unknown error');
+  console.error('API Error:', result.error, 'Status:', result.status);
+}
+```
+
+## Component Loading States
+```tsx
+const { apiCall, isTokenLoading, hasToken } = useAuthenticatedApi();
+const [loading, setLoading] = useState(false);
+
+// Handle token loading
+if (isTokenLoading) return <LoadingSpinner />;
+if (!hasToken) return <LoginPrompt />;
+
+// Handle API loading
+const handleSubmit = async () => {
+  setLoading(true);
+  const result = await apiCall('/submit');
+  setLoading(false);
+};
+```
+
+## Common Patterns
+
+### Data Fetching on Mount
+```tsx
+useEffect(() => {
+  if (hasToken) {
+    fetchInitialData();
+  }
+}, [hasToken]);
+```
+
+### Form Submission
+```tsx
+const handleSubmit = async (formData: FormData) => {
+  const result = await apiCall('/submit', {
+    method: 'POST',
+    body: formData
+  });
+  
+  if (result.ok) {
+    router.push('/success');
+  } else {
+    setErrors(result.error);
+  }
+};
+```
+
+### Custom Headers (e.g., file uploads)
+```tsx
+const result = await apiCall('/upload', {
+  method: 'POST',
+  body: formData,
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+});
+```
+
+## Testing Reference
+See [backend/test/page.tsx](mdc:src/app/(protected)/backend/test/page.tsx) for a complete working example.
+See [api-example.tsx](mdc:src/components/api-example.tsx) for various usage patterns.
+
+## DO NOT
+- ❌ Use `fetch()` directly for authenticated calls
+- ❌ Manually handle Bearer tokens
+- ❌ Use `credentials: 'include'` (cookie-based auth)
+- ❌ Import `useAccessToken` directly unless building a custom utility

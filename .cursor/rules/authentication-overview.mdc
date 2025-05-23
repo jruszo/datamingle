@@ -1,0 +1,58 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Authentication System Overview
+
+## Architecture
+This project uses **JWT-based authentication** with WorkOS AuthKit, solving the encryption incompatibility between Node.js (frontend) and Python (backend).
+
+### Key Components
+- **Frontend**: NextJS with WorkOS AuthKit using `useAccessToken()` hook
+- **Backend**: Python Flask with JWT verification using WorkOS JWKS
+- **Authentication Flow**: JWT Bearer tokens instead of encrypted session cookies
+
+## File Structure
+```
+src/
+├── hooks/
+│   ├── use-api.ts              # Main API utility hook
+│   ├── use-auth.ts             # WorkOS auth wrapper
+│   └── README.md               # Detailed API usage docs
+├── app/(protected)/
+│   └── backend/test/           # JWT auth test page
+└── components/
+    └── api-example.tsx         # API usage examples
+
+backend/
+├── app.py                      # Flask app with JWT auth
+└── requirements.txt            # Python dependencies
+```
+
+## Quick Reference
+- **Frontend API calls**: Use [use-api.ts](mdc:src/hooks/use-api.ts) `useAuthenticatedApi()` hook
+- **Backend auth**: Use [app.py](mdc:backend/app.py) `@with_auth` decorator
+- **Test authentication**: Visit [backend/test/page.tsx](mdc:src/app/(protected)/backend/test/page.tsx)
+- **API examples**: See [api-example.tsx](mdc:src/components/api-example.tsx)
+
+## Environment Variables Required
+```env
+# Frontend (.env.local)
+WORKOS_CLIENT_ID=client_...
+WORKOS_API_KEY=sk_test_...
+WORKOS_COOKIE_PASSWORD=...
+NEXT_PUBLIC_BACKEND_API=http://localhost:5000
+
+# Backend (.env)
+WORKOS_API_KEY=sk_test_...
+WORKOS_CLIENT_ID=client_...
+WORKOS_COOKIE_PASSWORD=...
+```
+
+## Authentication Flow
+1. User authenticates via WorkOS AuthKit (hosted login)
+2. Frontend gets JWT access token via `useAccessToken()`
+3. Frontend sends `Authorization: Bearer <token>` header
+4. Backend verifies JWT using WorkOS JWKS
+5. Backend extracts user info and grants access

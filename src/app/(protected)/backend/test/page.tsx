@@ -1,25 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { env } from "@/env";
-import { useAccessToken } from "@workos-inc/authkit-nextjs/components";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
+import { useAuthenticatedApi } from "@/hooks/use-api";
 
-interface ApiResponse {
-  message?: string;
-  status?: string;
-  data?: any;
-  error?: string;
-  authenticated?: boolean;
+interface AuthTestResponse {
+  authenticated: boolean;
+  message: string;
   user?: any;
   auth_source?: string;
   jwt_info?: any;
+  workos_config?: any;
 }
 
 export default function BackendTestPage() {
   const { user } = useAuth({ ensureSignedIn: true });
-  const { accessToken, loading: tokenLoading } = useAccessToken();
-  const [response, setResponse] = useState<ApiResponse | null>(null);
+  const { apiCall, isTokenLoading, hasToken } = useAuthenticatedApi();
+  const [response, setResponse] = useState<AuthTestResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,59 +25,29 @@ export default function BackendTestPage() {
     setError(null);
     setResponse(null);
 
-    if (!accessToken) {
-      setError("No access token available");
-      setLoading(false);
-      return;
+    console.log("Testing backend authentication...");
+
+    const result = await apiCall<AuthTestResponse>("/test/auth");
+
+    if (result.ok && result.data) {
+      setResponse(result.data);
+      console.log("Backend authentication successful:", result.data);
+    } else {
+      setError(result.error || "Unknown error occurred");
+      console.error("Backend authentication failed:", result.error);
     }
 
-    try {
-      const apiUrl = env.NEXT_PUBLIC_BACKEND_API;
-      console.log("Backend API URL:", apiUrl);
-      console.log("Access token available:", !!accessToken);
-      console.log(
-        "Access token (first 50 chars):",
-        accessToken.substring(0, 50) + "...",
-      );
-
-      const response = await fetch(`${apiUrl}/test/auth`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      console.log("Response status:", response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          `HTTP ${response.status}: ${errorData.message || "Unknown error"}`,
-        );
-      }
-
-      const data = await response.json();
-      setResponse(data);
-      console.log("Backend response:", data);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An unknown error occurred";
-      setError(errorMessage);
-      console.error("Backend test error:", err);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   useEffect(() => {
-    // Automatically test the endpoint when access token becomes available
-    if (accessToken && !loading && !response) {
+    // Automatically test the endpoint when token becomes available
+    if (hasToken && !loading && !response) {
       testBackendAuth();
     }
-  }, [accessToken]);
+  }, [hasToken]);
 
-  if (tokenLoading) {
+  if (isTokenLoading) {
     return (
       <div className="p-6">
         <h1 className="mb-4 text-2xl font-bold">Backend Authentication Test</h1>
@@ -108,8 +75,7 @@ export default function BackendTestPage() {
             <strong>User ID:</strong> {user?.id}
           </p>
           <p>
-            <strong>Access Token Available:</strong>{" "}
-            {accessToken ? "Yes" : "No"}
+            <strong>Access Token Available:</strong> {hasToken ? "Yes" : "No"}
           </p>
         </div>
       </div>
@@ -117,7 +83,7 @@ export default function BackendTestPage() {
       <div className="mb-4">
         <button
           onClick={testBackendAuth}
-          disabled={loading || !accessToken}
+          disabled={loading || !hasToken}
           className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
         >
           {loading ? "Testing..." : "Test Backend Authentication"}
@@ -141,8 +107,9 @@ export default function BackendTestPage() {
 
       <div className="mt-6 text-sm text-gray-600">
         <p>
-          <strong>Note:</strong> This test now uses JWT access tokens instead of
-          session cookies for authentication.
+          <strong>Note:</strong> This test uses the{" "}
+          <code>useAuthenticatedApi</code> hook which automatically handles JWT
+          access tokens for all backend API calls.
         </p>
         <p>
           The backend verifies the JWT using WorkOS JWKS and extracts user

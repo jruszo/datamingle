@@ -17,9 +17,9 @@ app = Flask(__name__)
 
 # Configure CORS
 CORS(app, 
-     origins=["http://localhost:3000"],  # Your NextJS frontend URL (corrected port)
+     origins=["http://localhost:3000"],  # Your NextJS frontend URL
      supports_credentials=True,  # Important for cookies
-     allow_headers=["Content-Type", "Authorization"],  # Uncommented this line
+     allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
 
@@ -29,15 +29,16 @@ workos = WorkOSClient(
 
 cookie_password = os.getenv("WORKOS_COOKIE_PASSWORD")
 
-# JWT verification setup
+# JWT verification setup with caching
 WORKOS_JWKS_URL = workos.user_management.get_jwks_url()
-jwks_client = PyJWKClient(WORKOS_JWKS_URL)
+# Cache JWKS keys and key set for better performance
+# lifespan: cache the JWK set for 1 hour (3600 seconds)
+# cache_keys: cache individual signing keys (LRU cache)
+jwks_client = PyJWKClient(WORKOS_JWKS_URL, cache_keys=True, max_cached_keys=10, cache_jwk_set=True, lifespan=3600)
 
 def with_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        print("=== JWT AUTH VERIFICATION ===")
-        
         # Get access token from Authorization header
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
@@ -48,10 +49,9 @@ def with_auth(f):
             }), 401
         
         access_token = auth_header[7:]  # Remove 'Bearer ' prefix
-        print("Access token received:", access_token[:50] + "..." if len(access_token) > 50 else access_token)
         
         try:
-            # Get the signing key from WorkOS JWKS
+            # Get the signing key from WorkOS JWKS (cached)
             signing_key = jwks_client.get_signing_key_from_jwt(access_token)
             
             # Verify and decode the JWT
@@ -62,19 +62,13 @@ def with_auth(f):
                 options={"verify_exp": True}  # Verify expiration
             )
             
-            print("JWT decoded successfully:", decoded_token)
-            
             # Extract user information from the token
             user_id = decoded_token.get('sub')
             org_id = decoded_token.get('org_id')
             
-            print("User ID:", user_id)
-            print("Organization ID:", org_id)
-            
             # Get full user details from WorkOS API
             try:
                 user = workos.user_management.get_user(user_id)
-                print("User fetched from API:", user.email)
                 
                 # Store user info in request context
                 request.workos_user = user
@@ -84,28 +78,24 @@ def with_auth(f):
                 return f(*args, **kwargs)
                 
             except Exception as user_fetch_error:
-                print("Error fetching user details:", str(user_fetch_error))
                 # Still continue with basic token info
                 request.workos_token = decoded_token
                 request.auth_source = "jwt"
                 return f(*args, **kwargs)
             
         except jwt.ExpiredSignatureError:
-            print("JWT token has expired")
             return jsonify({
                 'error': 'Token expired',
                 'message': 'Access token has expired',
                 'authenticated': False
             }), 401
         except jwt.InvalidTokenError as e:
-            print("JWT validation failed:", str(e))
             return jsonify({
                 'error': 'Invalid token',
                 'message': f'Token validation failed: {str(e)}',
                 'authenticated': False
             }), 401
         except Exception as e:
-            print("Authentication error:", str(e))
             return jsonify({
                 'error': 'Authentication error',
                 'message': str(e),
@@ -166,42 +156,17 @@ def test_auth():
                 'organization_id': jwt_token.get('org_id') if jwt_token else None,
                 'issued_at': jwt_token.get('iat') if jwt_token else None,
                 'expires_at': jwt_token.get('exp') if jwt_token else None,
-            },
-            'workos_config': {
-                'client_id': workos.client_id,
-                'jwks_url': WORKOS_JWKS_URL
             }
         }
         
         return jsonify(response_data)
         
     except Exception as e:
-        print("Error in test_auth:", e)
         return jsonify({
             'error': 'Failed to retrieve user data',
             'message': str(e),
             'authenticated': True  # Still authenticated, just failed to get data
         }), 500
-
-@app.route("/debug/config")
-def debug_config():
-    """
-    Debug endpoint to show WorkOS configuration details
-    """
-    return jsonify({
-        'workos_config': {
-            'client_id': workos.client_id,
-            'api_key_prefix': os.getenv("WORKOS_API_KEY")[:10] + "..." if os.getenv("WORKOS_API_KEY") else "None",
-            'cookie_password_length': len(cookie_password) if cookie_password else 0,
-            'cookie_password_prefix': cookie_password[:10] + "..." if cookie_password else "None",
-            'backend_env_file': os.path.join(os.path.dirname(__file__), '..', '.env'),
-            'env_vars_loaded': {
-                'WORKOS_API_KEY': bool(os.getenv("WORKOS_API_KEY")),
-                'WORKOS_CLIENT_ID': bool(os.getenv("WORKOS_CLIENT_ID")),
-                'WORKOS_COOKIE_PASSWORD': bool(os.getenv("WORKOS_COOKIE_PASSWORD"))
-            }
-        }
-    })
 
 @app.route("/health")
 def health_check():

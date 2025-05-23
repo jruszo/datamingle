@@ -1,0 +1,212 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Environment Setup and Configuration Rules
+
+## Environment Files Structure
+```
+.env                    # Shared between frontend and backend
+.env.local             # Frontend-specific overrides (optional)
+backend/.env           # Backend-specific (if different)
+```
+
+## Required Environment Variables
+
+### Frontend (.env or .env.local)
+```env
+# WorkOS Configuration
+WORKOS_CLIENT_ID=client_01JVS3C4GRBGBRPVEFD3KTKJGP
+WORKOS_API_KEY=sk_test_...
+WORKOS_COOKIE_PASSWORD=your_32_char_password_here
+
+# Backend API URL
+NEXT_PUBLIC_BACKEND_API=http://localhost:5000
+
+# NextJS Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+```
+
+### Backend (.env)
+```env
+# WorkOS Configuration (same as frontend)
+WORKOS_API_KEY=sk_test_...
+WORKOS_CLIENT_ID=client_01JVS3C4GRBGBRPVEFD3KTKJGP
+WORKOS_COOKIE_PASSWORD=your_32_char_password_here
+
+# Flask Configuration
+FLASK_ENV=development
+FLASK_DEBUG=True
+```
+
+## WorkOS Dashboard Configuration
+
+### Authentication Settings
+- **Maximum session length**: 7 days
+- **Access token duration**: 5 hours  
+- **Inactivity timeout**: 2 days
+- **Environment**: Staging (uses `sk_test_` API keys)
+
+### Redirect URLs
+```
+# Development
+http://localhost:3000/auth/callback
+
+# Production (update when deploying)
+https://yourdomain.com/auth/callback
+```
+
+## Development Setup
+
+### Frontend (NextJS)
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+# Runs on http://localhost:3000
+```
+
+### Backend (Python Flask)
+```bash
+# Navigate to backend
+cd backend
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start Flask server
+python app.py
+# Runs on http://localhost:5000
+```
+
+## Environment Validation
+
+### Frontend Environment Check
+```tsx
+// Add to a component to verify environment
+const envCheck = {
+  workosClientId: !!process.env.WORKOS_CLIENT_ID,
+  workosApiKey: !!process.env.WORKOS_API_KEY,
+  backendApi: !!process.env.NEXT_PUBLIC_BACKEND_API,
+  cookiePassword: !!process.env.WORKOS_COOKIE_PASSWORD
+};
+
+console.log('Environment check:', envCheck);
+```
+
+### Backend Environment Check
+Visit: `http://localhost:5000/debug/config`
+
+Expected response:
+```json
+{
+  "workos_config": {
+    "client_id": "client_01JVS3C4GRBGBRPVEFD3KTKJGP",
+    "api_key_prefix": "sk_test_...",
+    "env_vars_loaded": {
+      "WORKOS_API_KEY": true,
+      "WORKOS_CLIENT_ID": true,
+      "WORKOS_COOKIE_PASSWORD": true
+    }
+  }
+}
+```
+
+## Common Environment Issues
+
+### Missing NEXT_PUBLIC_ Prefix
+```env
+# ❌ Wrong - not accessible in browser
+BACKEND_API=http://localhost:5000
+
+# ✅ Correct - accessible in browser
+NEXT_PUBLIC_BACKEND_API=http://localhost:5000
+```
+
+### Environment Mismatch
+```env
+# Ensure both frontend and backend use same WorkOS environment
+# Frontend
+WORKOS_API_KEY=sk_test_...
+
+# Backend  
+WORKOS_API_KEY=sk_test_...  # ✅ Same environment
+
+# ❌ Wrong - different environments
+# Frontend: sk_test_...
+# Backend: sk_live_...
+```
+
+### CORS Issues
+```python
+# Backend CORS configuration in app.py
+CORS(app, 
+     origins=["http://localhost:3000"],  # Match frontend URL
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+)
+```
+
+## Environment Files Security
+
+### .gitignore Configuration
+```gitignore
+# Environment files
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+
+# Backend environment
+backend/.env
+```
+
+### Environment File Template (.env.example)
+```env
+# WorkOS Configuration
+WORKOS_CLIENT_ID=client_your_client_id_here
+WORKOS_API_KEY=sk_test_your_api_key_here
+WORKOS_COOKIE_PASSWORD=your_32_character_password_here
+
+# Backend API
+NEXT_PUBLIC_BACKEND_API=http://localhost:5000
+
+# NextJS
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+```
+
+## Production Considerations
+
+### Environment Variables for Production
+```env
+# Use production WorkOS credentials
+WORKOS_API_KEY=sk_live_...
+WORKOS_CLIENT_ID=client_...
+
+# Production URLs
+NEXT_PUBLIC_BACKEND_API=https://api.yourdomain.com
+NEXTAUTH_URL=https://yourdomain.com
+```
+
+### Security
+- Use different `WORKOS_COOKIE_PASSWORD` for each environment
+- Rotate API keys regularly
+- Use secure, random values for all secrets
+- Never commit actual values to version control
+
+## Troubleshooting
+
+### Check Environment Loading
+Reference the [README.md](mdc:src/hooks/README.md) for debugging API calls.
+
+### Common Error Messages
+- `"No Bearer token provided"` → Check `NEXT_PUBLIC_BACKEND_API`
+- `"INVALID_SESSION_COOKIE"` → Environment mismatch or expired session
+- `"Token validation failed"` → Check WorkOS API key and client ID match

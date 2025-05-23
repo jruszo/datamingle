@@ -1,0 +1,423 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Development Patterns and Best Practices
+
+## Frontend Component Patterns
+
+### Standard Protected Component
+```tsx
+"use client";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
+import { useAuthenticatedApi } from "@/hooks/use-api";
+
+export function ProtectedComponent() {
+  const { user } = useAuth({ ensureSignedIn: true });
+  const { apiCall, isTokenLoading, hasToken } = useAuthenticatedApi();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Handle token loading state
+  if (isTokenLoading) return <LoadingSpinner />;
+  if (!hasToken) return <AuthRequired />;
+
+  return <div>Protected content...</div>;
+}
+```
+
+### Data Fetching Pattern
+```tsx
+export function DataComponent() {
+  const { apiCall, hasToken } = useAuthenticatedApi();
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (hasToken) {
+      fetchData();
+    }
+  }, [hasToken]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    const result = await apiCall<DataType[]>('/api/data');
+    
+    if (result.ok && result.data) {
+      setData(result.data);
+    } else {
+      setError(result.error);
+    }
+    
+    setLoading(false);
+  };
+
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState error={error} onRetry={fetchData} />;
+
+  return <DataDisplay data={data} />;
+}
+```
+
+### Form Submission Pattern
+```tsx
+export function CreateForm() {
+  const { apiCall } = useAuthenticatedApi();
+  const [formData, setFormData] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setErrors({});
+
+    const result = await apiCall('/api/create', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (result.ok) {
+      // Success - redirect or show success message
+      router.push('/success');
+    } else {
+      // Handle validation errors
+      setErrors({ submit: result.error });
+    }
+
+    setSubmitting(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Form fields */}
+      <button disabled={submitting}>
+        {submitting ? 'Creating...' : 'Create'}
+      </button>
+      {errors.submit && <ErrorMessage>{errors.submit}</ErrorMessage>}
+    </form>
+  );
+}
+```
+
+## Backend Endpoint Patterns
+
+### Data Retrieval Endpoints
+```python
+@app.route("/api/users")
+@with_auth
+def get_users():
+    """Get users for authenticated user's organization"""
+    user = request.workos_user
+    token = request.workos_token
+    org_id = token.get('org_id')
+    
+    try:
+        # Fetch data scoped to user/organization
+        users = get_users_for_org(org_id) if org_id else get_users_for_user(user.id)
+        
+        return jsonify({
+            'users': [user.to_dict() for user in users],
+            'total': len(users)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+
+### Data Creation Endpoints
+```python
+@app.route("/api/items", methods=['POST'])
+@with_auth
+def create_item():
+    """Create new item owned by authenticated user"""
+    user = request.workos_user
+    data = request.get_json()
+    
+    # Validate input
+    if not data or 'name' not in data:
+        return jsonify({'error': 'Name is required'}), 400
+    
+    try:
+        # Create item with ownership
+        item = create_item({
+            'name': data['name'],
+            'owner_id': user.id,
+            'created_at': datetime.utcnow()
+        })
+        
+        return jsonify({'item': item.to_dict()}), 201
+        
+    except ValidationError as e:
+        return jsonify({'error': f'Validation failed: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': 'Internal server error'}), 500
+```
+
+### Update/Delete Endpoints
+```python
+@app.route("/api/items/<item_id>", methods=['PUT'])
+@with_auth
+def update_item(item_id):
+    """Update item if user owns it"""
+    user = request.workos_user
+    data = request.get_json()
+    
+    try:
+        # Check ownership
+        item = get_item(item_id)
+        if not item or item.owner_id != user.id:
+            return jsonify({'error': 'Item not found or access denied'}), 404
+        
+        # Update item
+        updated_item = update_item(item_id, data)
+        return jsonify({'item': updated_item.to_dict()})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/items/<item_id>", methods=['DELETE'])
+@with_auth
+def delete_item(item_id):
+    """Delete item if user owns it"""
+    user = request.workos_user
+    
+    try:
+        item = get_item(item_id)
+        if not item or item.owner_id != user.id:
+            return jsonify({'error': 'Item not found or access denied'}), 404
+        
+        delete_item(item_id)
+        return jsonify({'message': 'Item deleted successfully'})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+
+## Error Handling Patterns
+
+### Frontend Error Boundaries
+```tsx
+export function ApiErrorBoundary({ children }: { children: ReactNode }) {
+  const [error, setError] = useState<string | null>(null);
+  
+  const handleError = (error: string) => {
+    setError(error);
+    console.error('API Error:', error);
+  };
+  
+  if (error) {
+    return (
+      <div className="error-boundary">
+        <h2>Something went wrong</h2>
+        <p>{error}</p>
+        <button onClick={() => setError(null)}>Try Again</button>
+      </div>
+    );
+  }
+  
+  return <>{children}</>;
+}
+```
+
+### Backend Error Handling
+```python
+from functools import wraps
+
+def handle_api_errors(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except ValidationError as e:
+            return jsonify({'error': f'Validation failed: {str(e)}'}), 400
+        except PermissionError as e:
+            return jsonify({'error': f'Permission denied: {str(e)}'}), 403
+        except NotFoundError as e:
+            return jsonify({'error': f'Resource not found: {str(e)}'}), 404
+        except Exception as e:
+            print(f"Unexpected error in {f.__name__}: {e}")
+            return jsonify({'error': 'Internal server error'}), 500
+    return decorated_function
+
+@app.route("/api/complex-operation")
+@with_auth
+@handle_api_errors
+def complex_operation():
+    # Implementation that might raise various exceptions
+    pass
+```
+
+## Testing Patterns
+
+### Frontend Component Testing
+```tsx
+// __tests__/components/MyComponent.test.tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import { useAuthenticatedApi } from '@/hooks/use-api';
+import MyComponent from '../MyComponent';
+
+// Mock the authentication hook
+jest.mock('@/hooks/use-api');
+const mockUseAuthenticatedApi = useAuthenticatedApi as jest.MockedFunction<typeof useAuthenticatedApi>;
+
+describe('MyComponent', () => {
+  it('renders data when API call succeeds', async () => {
+    const mockApiCall = jest.fn().mockResolvedValue({
+      ok: true,
+      data: { message: 'Test data' }
+    });
+    
+    mockUseAuthenticatedApi.mockReturnValue({
+      apiCall: mockApiCall,
+      isTokenLoading: false,
+      hasToken: true
+    });
+    
+    render(<MyComponent />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Test data')).toBeInTheDocument();
+    });
+  });
+});
+```
+
+### Backend Endpoint Testing
+```python
+# tests/test_endpoints.py
+import pytest
+from unittest.mock import patch, MagicMock
+
+def test_get_users_success():
+    with patch('app.request') as mock_request:
+        # Mock authenticated user
+        mock_user = MagicMock()
+        mock_user.id = 'user_123'
+        mock_user.email = 'test@example.com'
+        mock_request.workos_user = mock_user
+        mock_request.workos_token = {'org_id': 'org_123'}
+        
+        # Mock data layer
+        with patch('app.get_users_for_org') as mock_get_users:
+            mock_get_users.return_value = [mock_user]
+            
+            response = get_users()
+            
+            assert response.status_code == 200
+            assert 'users' in response.get_json()
+```
+
+## Performance Patterns
+
+### Frontend Optimization
+```tsx
+// Memoize API calls
+const memoizedApiCall = useCallback(async (endpoint: string) => {
+  return await apiCall(endpoint);
+}, [apiCall]);
+
+// Cache data with React Query or SWR
+import useSWR from 'swr';
+
+export function CachedDataComponent() {
+  const { apiCall } = useAuthenticatedApi();
+  
+  const fetcher = (url: string) => apiCall(url).then(result => 
+    result.ok ? result.data : Promise.reject(result.error)
+  );
+  
+  const { data, error, isLoading } = useSWR('/api/data', fetcher);
+  
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+  
+  return <DataDisplay data={data} />;
+}
+```
+
+### Backend Optimization
+```python
+from functools import lru_cache
+import redis
+
+# Cache expensive operations
+@lru_cache(maxsize=128)
+def get_expensive_data(user_id: str):
+    # Expensive computation
+    return expensive_operation(user_id)
+
+# Redis caching for API responses
+@app.route("/api/cached-data")
+@with_auth
+def get_cached_data():
+    user = request.workos_user
+    cache_key = f"user_data:{user.id}"
+    
+    # Try cache first
+    cached_data = redis_client.get(cache_key)
+    if cached_data:
+        return jsonify(json.loads(cached_data))
+    
+    # Compute and cache
+    data = compute_user_data(user.id)
+    redis_client.setex(cache_key, 300, json.dumps(data))  # 5 min cache
+    
+    return jsonify(data)
+```
+
+## Security Patterns
+
+### Input Validation
+```python
+from marshmallow import Schema, fields, ValidationError
+
+class CreateItemSchema(Schema):
+    name = fields.Str(required=True, validate=lambda x: len(x) <= 100)
+    description = fields.Str(missing="", validate=lambda x: len(x) <= 500)
+    category = fields.Str(required=True, validate=lambda x: x in ['A', 'B', 'C'])
+
+@app.route("/api/items", methods=['POST'])
+@with_auth
+def create_item():
+    schema = CreateItemSchema()
+    
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({'errors': err.messages}), 400
+    
+    # Proceed with validated data
+    user = request.workos_user
+    item = create_item_for_user(user.id, data)
+    return jsonify({'item': item.to_dict()}), 201
+```
+
+### Rate Limiting
+```python
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["1000 per hour"]
+)
+
+@app.route("/api/expensive-operation")
+@with_auth
+@limiter.limit("10 per minute")
+def expensive_operation():
+    user = request.workos_user
+    result = perform_expensive_operation(user.id)
+    return jsonify({'result': result})
+```
+
+For complete examples, reference:
+- [backend/test/page.tsx](mdc:src/app/(protected)/backend/test/page.tsx) - Complete frontend component
+- [api-example.tsx](mdc:src/components/api-example.tsx) - Various API usage patterns
+- [app.py](mdc:backend/app.py) - Complete backend implementation
+- [use-api.ts](mdc:src/hooks/use-api.ts) - API utility implementation

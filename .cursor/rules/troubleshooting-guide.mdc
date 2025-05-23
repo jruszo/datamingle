@@ -1,0 +1,227 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Authentication Troubleshooting Guide
+
+## Common Error Messages and Solutions
+
+### "No Bearer token provided"
+**Cause**: Frontend not sending Authorization header or `NEXT_PUBLIC_BACKEND_API` misconfigured.
+
+**Solutions**:
+1. Check environment variables:
+   ```env
+   NEXT_PUBLIC_BACKEND_API=http://localhost:5000
+   ```
+2. Verify you're using [use-api.ts](mdc:src/hooks/use-api.ts):
+   ```tsx
+   const { apiCall } = useAuthenticatedApi();
+   await apiCall('/endpoint'); // ✅ Correct
+   ```
+3. Don't use fetch() directly:
+   ```tsx
+   fetch('/endpoint'); // ❌ Wrong - no auth header
+   ```
+
+### "Token validation failed"
+**Cause**: JWT signature invalid or WorkOS configuration mismatch.
+
+**Solutions**:
+1. Verify environment consistency:
+   ```env
+   # Both frontend and backend must have:
+   WORKOS_API_KEY=sk_test_same_key
+   WORKOS_CLIENT_ID=client_same_id
+   ```
+2. Check WorkOS environment (staging vs production)
+3. Restart both frontend and backend servers
+4. Clear browser storage and re-authenticate
+
+### "Token expired"
+**Cause**: JWT access token has exceeded its 5-hour lifetime.
+
+**Solutions**:
+1. **Frontend**: The `useAccessToken()` hook should automatically refresh
+2. **Manual refresh**: Log out and log back in
+3. **Backend**: Return 401, frontend should handle refresh automatically
+
+### "INVALID_SESSION_COOKIE" (Legacy Error)
+**Cause**: Trying to use old cookie-based authentication.
+
+**Solutions**:
+1. Ensure you're using JWT authentication (Bearer tokens)
+2. Remove any cookie-based auth code
+3. Use [use-api.ts](mdc:src/hooks/use-api.ts) hook instead of manual fetch
+
+## Frontend Debugging
+
+### Check Token Status
+```tsx
+import { useAccessToken, useAuth } from "@workos-inc/authkit-nextjs/components";
+
+function DebugAuth() {
+  const { user } = useAuth();
+  const { accessToken, loading } = useAccessToken();
+  
+  console.log({
+    user: user,
+    hasToken: !!accessToken,
+    tokenLoading: loading,
+    tokenLength: accessToken?.length
+  });
+  
+  return <div>Check console for auth debug info</div>;
+}
+```
+
+### Verify Environment Variables
+```tsx
+// Add to any component
+useEffect(() => {
+  console.log('Frontend environment check:', {
+    backendApi: process.env.NEXT_PUBLIC_BACKEND_API,
+    workosClientId: process.env.WORKOS_CLIENT_ID,
+    hasWorkosApiKey: !!process.env.WORKOS_API_KEY
+  });
+}, []);
+```
+
+### Network Request Debugging
+The [use-api.ts](mdc:src/hooks/use-api.ts) automatically logs all requests:
+```
+[API] GET http://localhost:5000/test/auth
+[API] Success: { authenticated: true, ... }
+```
+
+## Backend Debugging
+
+### Debug Configuration Endpoint
+Visit: `http://localhost:5000/debug/config`
+
+Expected response:
+```json
+{
+  "workos_config": {
+    "client_id": "client_01JVS3C4GRBGBRPVEFD3KTKJGP",
+    "api_key_prefix": "sk_test_...",
+    "env_vars_loaded": {
+      "WORKOS_API_KEY": true,
+      "WORKOS_CLIENT_ID": true,
+      "WORKOS_COOKIE_PASSWORD": true
+    }
+  }
+}
+```
+
+### JWT Verification Debugging
+The [app.py](mdc:backend/app.py) `@with_auth` decorator logs:
+```
+=== JWT AUTH VERIFICATION ===
+Access token received: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsInBy...
+JWT decoded successfully: {'sub': 'user_...', 'exp': 1234567890}
+User ID: user_01JVS3C4GRBGBRPVEFD3KTKJGP
+User fetched from API: user@example.com
+```
+
+### Manual Token Testing
+```bash
+# Get JWT token from browser DevTools → Application → Session Storage
+# Then test manually:
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+     http://localhost:5000/test/auth
+```
+
+## Common Integration Issues
+
+### CORS Errors
+**Symptoms**: `Access to fetch has been blocked by CORS policy`
+
+**Solutions**:
+1. Check backend CORS configuration in [app.py](mdc:backend/app.py):
+   ```python
+   CORS(app, 
+        origins=["http://localhost:3000"],  # ✅ Match frontend URL
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"]
+   )
+   ```
+2. Verify frontend URL matches CORS origin
+3. Restart backend server after CORS changes
+
+### Environment Mismatch
+**Symptoms**: Authentication works in frontend but fails in backend
+
+**Solutions**:
+1. Both must use same WorkOS environment:
+   ```env
+   # ✅ Both staging
+   WORKOS_API_KEY=sk_test_...
+   
+   # ❌ Mixed environments  
+   # Frontend: sk_test_...
+   # Backend: sk_live_...
+   ```
+2. Share same `.env` file or ensure consistency
+
+### Port Conflicts
+**Symptoms**: "Connection refused" or wrong backend responses
+
+**Solutions**:
+1. Verify backend runs on port 5000: `python backend/app.py`
+2. Check frontend environment: `NEXT_PUBLIC_BACKEND_API=http://localhost:5000`
+3. Test backend directly: `curl http://localhost:5000/health`
+
+## Testing and Validation
+
+### Complete Authentication Flow Test
+1. **Frontend**: Visit [backend/test/page.tsx](mdc:src/app/(protected)/backend/test/page.tsx)
+2. **Expected**: Green success message with user data
+3. **If failed**: Check browser console and backend logs
+
+### API Integration Test
+Use [api-example.tsx](mdc:src/components/api-example.tsx) to test various patterns:
+- GET requests
+- POST requests  
+- Error handling
+- Loading states
+
+### Manual JWT Verification
+```python
+# Test JWT manually in Python
+import jwt
+from jwt import PyJWKClient
+
+jwks_client = PyJWKClient("https://api.workos.com/sso/jwks/client_YOUR_CLIENT_ID")
+signing_key = jwks_client.get_signing_key_from_jwt("YOUR_JWT_TOKEN")
+decoded = jwt.decode("YOUR_JWT_TOKEN", signing_key.key, algorithms=["RS256"])
+print(decoded)
+```
+
+## When to Restart Services
+
+### Restart Backend When:
+- Environment variables changed
+- CORS configuration modified
+- New dependencies installed
+- Code changes in authentication logic
+
+### Restart Frontend When:
+- Environment variables changed (especially `NEXT_PUBLIC_*`)
+- New npm packages installed
+- WorkOS configuration modified
+
+### Clear Browser Storage When:
+- Switching between environments
+- Authentication behaves unexpectedly
+- Testing different user accounts
+- JWT tokens seem corrupted
+
+## Getting Help
+
+1. **Check Console Logs**: Both browser and backend terminal
+2. **Verify Environment**: Use debug endpoints and environment checks
+3. **Test Step by Step**: Frontend auth → Token → Backend verification
+4. **Reference Working Code**: [backend/test/page.tsx](mdc:src/app/(protected)/backend/test/page.tsx) and [app.py](mdc:backend/app.py)
+5. **WorkOS Documentation**: https://workos.com/docs/authkit

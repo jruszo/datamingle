@@ -1,0 +1,196 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Backend Authentication Rules
+
+## JWT Authentication System
+**Reference implementation: [app.py](mdc:backend/app.py)**
+
+## Required Dependencies
+Add to [requirements.txt](mdc:backend/requirements.txt):
+```txt
+PyJWT[crypto]==2.10.1
+workos==5.21.0
+```
+
+## Authentication Decorator
+**ALWAYS use `@with_auth` decorator for protected endpoints:**
+
+```python
+from functools import wraps
+import jwt
+from jwt import PyJWKClient
+
+# Setup (already in app.py)
+WORKOS_JWKS_URL = workos.user_management.get_jwks_url()
+jwks_client = PyJWKClient(WORKOS_JWKS_URL)
+
+@app.route("/protected-endpoint")
+@with_auth
+def protected_endpoint():
+    # Access authenticated user
+    user = request.workos_user  # WorkOS User object
+    token = request.workos_token  # Decoded JWT payload
+    
+    return jsonify({
+        'message': f'Hello {user.email}!',
+        'user_id': user.id
+    })
+```
+
+## JWT Verification Process
+The `@with_auth` decorator automatically:
+1. Extracts Bearer token from `Authorization` header
+2. Verifies JWT signature using WorkOS JWKS
+3. Validates token expiration
+4. Fetches full user details from WorkOS API
+5. Stores user info in `request.workos_user`
+6. Stores token payload in `request.workos_token`
+
+## Error Responses
+The decorator returns standardized error responses:
+
+```python
+# Missing token
+{
+  "error": "Authentication required",
+  "message": "No Bearer token provided",
+  "authenticated": false
+}
+
+# Expired token
+{
+  "error": "Token expired", 
+  "message": "Access token has expired",
+  "authenticated": false
+}
+
+# Invalid token
+{
+  "error": "Invalid token",
+  "message": "Token validation failed: ...",
+  "authenticated": false
+}
+```
+
+## User Data Access
+After successful authentication, access user data:
+
+```python
+@app.route("/user-profile")
+@with_auth
+def get_user_profile():
+    user = request.workos_user
+    token = request.workos_token
+    
+    return jsonify({
+        'user': {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email_verified': user.email_verified
+        },
+        'token_info': {
+            'user_id': token.get('sub'),
+            'org_id': token.get('org_id'),
+            'expires_at': token.get('exp')
+        }
+    })
+```
+
+## Endpoint Patterns
+
+### Data Retrieval
+```python
+@app.route("/user-data")
+@with_auth
+def get_user_data():
+    user = request.workos_user
+    
+    # Fetch user-specific data
+    data = get_data_for_user(user.id)
+    
+    return jsonify({'data': data})
+```
+
+### Data Creation
+```python
+@app.route("/create-item", methods=['POST'])
+@with_auth
+def create_item():
+    user = request.workos_user
+    data = request.get_json()
+    
+    # Create item owned by authenticated user
+    item = create_item_for_user(user.id, data)
+    
+    return jsonify({'item': item}), 201
+```
+
+### Organization-Scoped Data
+```python
+@app.route("/org-data")
+@with_auth
+def get_org_data():
+    token = request.workos_token
+    org_id = token.get('org_id')
+    
+    if not org_id:
+        return jsonify({'error': 'No organization context'}), 400
+    
+    data = get_data_for_org(org_id)
+    return jsonify({'data': data})
+```
+
+## Error Handling Best Practices
+```python
+@app.route("/complex-operation", methods=['POST'])
+@with_auth
+def complex_operation():
+    try:
+        user = request.workos_user
+        data = request.get_json()
+        
+        # Validate input
+        if not data or 'required_field' not in data:
+            return jsonify({'error': 'Missing required field'}), 400
+        
+        # Perform operation
+        result = perform_operation(user.id, data)
+        
+        return jsonify({'result': result})
+        
+    except ValidationError as e:
+        return jsonify({'error': f'Validation failed: {str(e)}'}), 400
+    except PermissionError as e:
+        return jsonify({'error': f'Permission denied: {str(e)}'}), 403
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+```
+
+## Environment Setup
+Ensure these environment variables are set:
+```env
+WORKOS_API_KEY=sk_test_...
+WORKOS_CLIENT_ID=client_...
+WORKOS_COOKIE_PASSWORD=...  # Not used for JWT, but required by WorkOS SDK
+```
+
+## Testing Endpoints
+Test your protected endpoints:
+```bash
+# Get JWT token from frontend, then:
+curl -H "Authorization: Bearer <jwt_token>" \
+     http://localhost:5000/protected-endpoint
+```
+
+## DO NOT
+- ❌ Use session cookies for authentication
+- ❌ Skip the `@with_auth` decorator on protected endpoints
+- ❌ Access `request.workos_user` without the decorator
+- ❌ Store JWT tokens in the backend
+- ❌ Validate JWT manually (use WorkOS JWKS)
