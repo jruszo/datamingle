@@ -1,11 +1,8 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
+from .base import db
 
-# We'll import db from app when needed to avoid circular imports
-# The Base will be db.Model from Flask-SQLAlchemy
-
-class User:
+class User(db.Model):
     """
     User model that stores additional user data beyond what WorkOS provides.
     This supplements the WorkOS user data with application-specific information.

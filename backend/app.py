@@ -2,7 +2,6 @@ import os
 from workos import WorkOSClient
 from flask import Flask, request, jsonify, session, redirect, url_for, make_response
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from functools import wraps
 from dotenv import load_dotenv
@@ -11,8 +10,6 @@ import requests
 from jwt import PyJWKClient
 from config.database import DatabaseConfig
 from datetime import datetime
-
-from models import User
 
 # Load environment variables from ../.env
 load_dotenv(
@@ -27,11 +24,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = DatabaseConfig.SQLALCHEMY_TRACK_M
 app.config['SQLALCHEMY_ECHO'] = DatabaseConfig.SQLALCHEMY_ECHO
 
 # Initialize SQLAlchemy and Flask-Migrate
-db = SQLAlchemy(app)
+from models.base import db
+db.init_app(app)
 migrate = Migrate(app, db)
 
 # Import models after db initialization to avoid circular imports
-from models import User
+from models import User, DatabaseInstance
 
 # Configure CORS
 CORS(app, 
@@ -248,6 +246,242 @@ def health_check():
         'cors_enabled': True,
         'database_configured': bool(app.config.get('SQLALCHEMY_DATABASE_URI'))
     })
+
+# Database Instance CRUD endpoints
+@app.route("/api/database-instances", methods=['GET'])
+@with_auth
+def get_database_instances():
+    """
+    Get all database instances for the authenticated user.
+    """
+    try:
+        user = getattr(request, 'local_user', None)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        instances = DatabaseInstance.find_by_user(user.id)
+        return jsonify({
+            'success': True,
+            'data': [instance.to_dict() for instance in instances],
+            'count': len(instances)
+        })
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to retrieve database instances',
+            'message': str(e)
+        }), 500
+
+@app.route("/api/database-instances", methods=['POST'])
+@with_auth
+def create_database_instance():
+    """
+    Create a new database instance for the authenticated user.
+    """
+    try:
+        user = getattr(request, 'local_user', None)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        required_fields = ['database_type', 'name', 'hostname', 'username', 'password']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        if missing_fields:
+            return jsonify({
+                'error': 'Missing required fields',
+                'missing_fields': missing_fields
+            }), 400
+        
+        # Validate database type
+        supported_types = ['mysql', 'postgresql', 'mssql', 'oracle', 'mongodb']
+        if data['database_type'].lower() not in supported_types:
+            return jsonify({
+                'error': 'Unsupported database type',
+                'supported_types': supported_types
+            }), 400
+        
+        # Create new instance
+        temp_instance = DatabaseInstance()
+        temp_instance.database_type = data['database_type'].lower()
+        default_port = temp_instance.get_default_port()
+        
+        instance = DatabaseInstance(
+            user_id=user.id,
+            database_type=data['database_type'].lower(),
+            name=data['name'],
+            hostname=data['hostname'],
+            port=data.get('port', default_port),
+            username=data['username'],
+            database_name=data.get('database_name'),
+            ssl_enabled=data.get('ssl_enabled', False),
+            connection_timeout=data.get('connection_timeout', 30)
+        )
+        
+        # Set password (this will encrypt it)
+        instance.password = data['password']
+        
+        db.session.add(instance)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Database instance created successfully',
+            'data': instance.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': 'Failed to create database instance',
+            'message': str(e)
+        }), 500
+
+@app.route("/api/database-instances/<int:instance_id>", methods=['GET'])
+@with_auth
+def get_database_instance(instance_id):
+    """
+    Get a specific database instance by ID for the authenticated user.
+    """
+    try:
+        user = getattr(request, 'local_user', None)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        if not instance:
+            return jsonify({'error': 'Database instance not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'data': instance.to_dict()
+        })
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to retrieve database instance',
+            'message': str(e)
+        }), 500
+
+@app.route("/api/database-instances/<int:instance_id>", methods=['PUT'])
+@with_auth
+def update_database_instance(instance_id):
+    """
+    Update a specific database instance for the authenticated user.
+    """
+    try:
+        user = getattr(request, 'local_user', None)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        if not instance:
+            return jsonify({'error': 'Database instance not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Update allowed fields
+        updateable_fields = [
+            'name', 'hostname', 'port', 'username', 'database_name',
+            'ssl_enabled', 'connection_timeout'
+        ]
+        
+        for field in updateable_fields:
+            if field in data:
+                setattr(instance, field, data[field])
+        
+        # Handle password update separately (encryption)
+        if 'password' in data and data['password']:
+            instance.password = data['password']
+        
+        # Handle database type update with validation
+        if 'database_type' in data:
+            supported_types = ['mysql', 'postgresql', 'mssql', 'oracle', 'mongodb']
+            if data['database_type'].lower() not in supported_types:
+                return jsonify({
+                    'error': 'Unsupported database type',
+                    'supported_types': supported_types
+                }), 400
+            instance.database_type = data['database_type'].lower()
+        
+        instance.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Database instance updated successfully',
+            'data': instance.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': 'Failed to update database instance',
+            'message': str(e)
+        }), 500
+
+@app.route("/api/database-instances/<int:instance_id>", methods=['DELETE'])
+@with_auth
+def delete_database_instance(instance_id):
+    """
+    Delete (soft delete) a specific database instance for the authenticated user.
+    """
+    try:
+        user = getattr(request, 'local_user', None)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        if not instance:
+            return jsonify({'error': 'Database instance not found'}), 404
+        
+        instance.soft_delete()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Database instance deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': 'Failed to delete database instance',
+            'message': str(e)
+        }), 500
+
+@app.route("/api/database-instances/<int:instance_id>/test-connection", methods=['POST'])
+@with_auth
+def test_database_connection(instance_id):
+    """
+    Test the connection to a specific database instance.
+    """
+    try:
+        user = getattr(request, 'local_user', None)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        if not instance:
+            return jsonify({'error': 'Database instance not found'}), 404
+        
+        success, message = instance.test_connection()
+        
+        return jsonify({
+            'success': success,
+            'message': message,
+            'connection_status': instance.connection_status,
+            'last_tested_at': instance.last_tested_at.isoformat() if instance.last_tested_at else None
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to test database connection',
+            'message': str(e)
+        }), 500
 
 # Database management commands
 @app.cli.command()
