@@ -7,9 +7,10 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default async function HomePage() {
-  const { user } = await withAuth();
+  const { user } = await withAuth({ ensureSignedIn: true });
   const signInUrl = await getSignInUrl();
   const signUpUrl = await getSignUpUrl();
+  console.log("Workos cookie password:", process.env.WORKOS_COOKIE_PASSWORD);
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-blue-600 p-6 text-white">

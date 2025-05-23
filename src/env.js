@@ -11,7 +11,8 @@ export const env = createEnv({
     WORKOS_API_KEY: z.string(),
     WORKOS_CLIENT_ID: z.string(),
     WORKOS_COOKIE_PASSWORD: z.string(),
-
+    WORKOS_COOKIE_SAMESITE: z.enum(["lax", "strict", "none"]),
+    
   },
 
   /**
@@ -22,6 +23,7 @@ export const env = createEnv({
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string(),
     NEXT_PUBLIC_WORKOS_REDIRECT_URI: z.string(),
+    NEXT_PUBLIC_BACKEND_API: z.string(),
   },
 
   /**
@@ -35,6 +37,8 @@ export const env = createEnv({
     WORKOS_API_KEY: process.env.WORKOS_API_KEY,
     WORKOS_CLIENT_ID: process.env.WORKOS_CLIENT_ID,
     WORKOS_COOKIE_PASSWORD: process.env.WORKOS_COOKIE_PASSWORD,
+    NEXT_PUBLIC_BACKEND_API: process.env.NEXT_PUBLIC_BACKEND_API,
+    WORKOS_COOKIE_SAMESITE: process.env.WORKOS_COOKIE_SAMESITE,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

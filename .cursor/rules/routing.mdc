@@ -1,0 +1,29 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Next.js Routing Structure
+
+All new pages should be created under the `(protected)` route group unless explicitly specified otherwise.
+
+## Route Group Structure
+
+- **Protected Routes**: [src/app/(protected)/](mdc:src/app/(protected)/) - Default location for all new pages
+- **Landing Pages**: [src/app/(landing)/](mdc:src/app/(landing)/) - Only for public landing pages
+- **Auth Routes**: [src/app/auth/](mdc:src/app/auth/) - Authentication-related pages only
+
+## Default Behavior
+
+When creating new pages or routes:
+1. Always place them under `src/app/(protected)/` unless told otherwise
+2. Use the existing layout structure from [src/app/(protected)/layout.tsx](mdc:src/app/(protected)/layout.tsx)
+3. Follow the established pattern of creating `page.tsx` files in appropriately named directories
+
+## Examples
+
+- New dashboard feature: `src/app/(protected)/dashboard/feature/page.tsx`
+- Backend testing page: `src/app/(protected)/backend/test/page.tsx`
+- User settings: `src/app/(protected)/settings/page.tsx`
+
+Only create pages outside the `(protected)` group when explicitly requested for public access or authentication flows.
