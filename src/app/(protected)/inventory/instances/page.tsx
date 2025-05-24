@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuthenticatedApi } from "@/hooks/use-api"; // Added import
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -61,7 +62,7 @@ interface DatabaseInstanceFormData {
 
 export default function DatabaseInstancesPage() {
   const [instances, setInstances] = useState<DatabaseInstance[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Will be replaced by isTokenLoading or local loading states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingInstance, setEditingInstance] =
     useState<DatabaseInstance | null>(null);
@@ -78,6 +79,8 @@ export default function DatabaseInstancesPage() {
   });
   //const { toast } = useToast();
 
+  const { apiCall, isTokenLoading, hasToken } = useAuthenticatedApi(); // Instantiated hook
+
   const databaseTypes = [
     { value: "mysql", label: "MySQL", defaultPort: 3306 },
     { value: "postgresql", label: "PostgreSQL", defaultPort: 5432 },
@@ -87,42 +90,37 @@ export default function DatabaseInstancesPage() {
   ];
 
   const fetchInstances = async () => {
+    // setLoading(true); // Consider a local loading state if needed beyond initial load
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        "http://localhost:5000/api/database-instances",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      const result = await apiCall("/database-instances");
 
-      if (response.ok) {
-        const result = await response.json();
+      if (result.ok) {
         setInstances(result.data);
       } else {
+        console.error("Failed to fetch database instances:", result.error);
         //toast({
         //  title: "Error",
-        //  description: "Failed to fetch database instances",
+        //  description: result.error || "Failed to fetch database instances",
         //  variant: "destructive",
         //});
       }
     } catch (error) {
+      console.error("Failed to fetch database instances:", error);
       //   toast({
       //     title: "Error",
       //     description: "Failed to fetch database instances",
       //     variant: "destructive",
       //   });
     } finally {
-      setLoading(false);
+      // setLoading(false); // Handled by isTokenLoading or local state
     }
   };
 
   useEffect(() => {
-    fetchInstances();
-  }, []);
+    if (hasToken) {
+      fetchInstances();
+    }
+  }, [hasToken]); // Added hasToken dependency
 
   const handleDatabaseTypeChange = (value: string) => {
     const dbType = databaseTypes.find((type) => type.value === value);
@@ -135,25 +133,22 @@ export default function DatabaseInstancesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Add a local loading state for form submission if desired
+    // const [isSubmitting, setIsSubmitting] = useState(false);
+    // setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem("access_token");
       const url = editingInstance
-        ? `http://localhost:5000/api/database-instances/${editingInstance.id}`
-        : "http://localhost:5000/api/database-instances";
-
+        ? `/database-instances/${editingInstance.id}`
+        : "/database-instances";
       const method = editingInstance ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const result = await apiCall(url, {
         method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        body: formData,
       });
 
-      if (response.ok) {
+      if (result.ok) {
         //toast({
         //  title: "Success",
         //  description: `Database instance ${editingInstance ? "updated" : "created"} successfully`,
@@ -163,21 +158,24 @@ export default function DatabaseInstancesPage() {
         resetForm();
         fetchInstances();
       } else {
-        const error = await response.json();
+        console.error(`Failed to ${editingInstance ? "update" : "create"} database instance:`, result.error);
         //toast({
         //  title: "Error",
         //  description:
-        //    error.message ||
+        //    result.error ||
         //    `Failed to ${editingInstance ? "update" : "create"} database instance`,
         //  variant: "destructive",
         //});
       }
     } catch (error) {
+      console.error(`Failed to ${editingInstance ? "update" : "create"} database instance:`, error);
       //toast({
       //  title: "Error",
       //  description: `Failed to ${editingInstance ? "update" : "create"} database instance`,
       //  variant: "destructive",
       //});
+    } finally {
+      // setIsSubmitting(false);
     }
   };
 
@@ -200,69 +198,78 @@ export default function DatabaseInstancesPage() {
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this database instance?"))
       return;
-
+    // Add a local loading state for delete if desired
+    // const [isDeleting, setIsDeleting] = useState(false);
+    // setIsDeleting(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `http://localhost:5000/api/database-instances/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const result = await apiCall(`/database-instances/${id}`, {
+        method: "DELETE",
+      });
 
-      if (response.ok) {
+      if (result.ok) {
         //toast({
         //  title: "Success",
         //  description: "Database instance deleted successfully",
         //});
         fetchInstances();
       } else {
+        console.error("Failed to delete database instance:", result.error);
         //toast({
         //  title: "Error",
-        //  description: "Failed to delete database instance",
+        //  description: result.error || "Failed to delete database instance",
         //  variant: "destructive",
         //});
       }
     } catch (error) {
+      console.error("Failed to delete database instance:", error);
       //toast({
       //  title: "Error",
       //  description: "Failed to delete database instance",
       //  variant: "destructive",
       //});
+    } finally {
+      // setIsDeleting(false);
     }
   };
 
   const handleTestConnection = async (id: number) => {
+    // Add a local loading state for test connection if desired
+    // const [isTesting, setIsTesting] = useState(false);
+    // setIsTesting(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `http://localhost:5000/api/database-instances/${id}/test-connection`,
+      const result = await apiCall(
+        `/database-instances/${id}/test-connection`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         },
       );
 
-      const result = await response.json();
-
-      //toast({
-      //  title: result.success ? "Connection Successful" : "Connection Failed",
-      //  description: result.message,
-      //  variant: result.success ? "default" : "destructive",
-      //});
-
+      // Assuming the response structure from useAuthenticatedApi is { ok: boolean, data: any, error: string | null }
+      // And the specific endpoint returns { success: boolean, message: string } in `data`
+      if (result.ok && result.data) {
+        //toast({
+        //  title: result.data.success ? "Connection Successful" : "Connection Failed",
+        //  description: result.data.message,
+        //  variant: result.data.success ? "default" : "destructive",
+        //});
+      } else {
+         console.error("Failed to test connection:", result.error || result.data?.message);
+        //toast({
+        //  title: "Error",
+        //  description: result.error || result.data?.message || "Failed to test connection",
+        //  variant: "destructive",
+        //});
+      }
       fetchInstances(); // Refresh to update connection status
     } catch (error) {
+      console.error("Failed to test connection:", error);
       //toast({
       //  title: "Error",
       //  description: "Failed to test connection",
       //  variant: "destructive",
       //});
+    } finally {
+      // setIsTesting(false);
     }
   };
 
@@ -295,7 +302,7 @@ export default function DatabaseInstancesPage() {
     }
   };
 
-  if (loading) {
+  if (isTokenLoading) { // Replaced loading with isTokenLoading
     return (
       <div className="flex min-h-screen items-center justify-center">
         Loading...

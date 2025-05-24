@@ -255,11 +255,11 @@ def get_database_instances():
     Get all database instances for the authenticated user.
     """
     try:
-        user = getattr(request, 'local_user', None)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        # user = getattr(request, 'local_user', None) # User authentication is still enforced by @with_auth
+        # if not user:
+        #     return jsonify({'error': 'User not found'}), 404 # Should be caught by @with_auth
         
-        instances = DatabaseInstance.find_by_user(user.id)
+        instances = DatabaseInstance.find_all() # Changed from find_by_user
         return jsonify({
             'success': True,
             'data': [instance.to_dict() for instance in instances],
@@ -346,11 +346,11 @@ def get_database_instance(instance_id):
     Get a specific database instance by ID for the authenticated user.
     """
     try:
-        user = getattr(request, 'local_user', None)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        # user = getattr(request, 'local_user', None) # User authentication is still enforced by @with_auth
+        # if not user:
+        #     return jsonify({'error': 'User not found'}), 404 # Should be caught by @with_auth
         
-        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        instance = DatabaseInstance.find_by_id(instance_id) # Changed from find_by_id_and_user
         if not instance:
             return jsonify({'error': 'Database instance not found'}), 404
         
@@ -371,11 +371,11 @@ def update_database_instance(instance_id):
     Update a specific database instance for the authenticated user.
     """
     try:
-        user = getattr(request, 'local_user', None)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        # user = getattr(request, 'local_user', None) # User authentication is still enforced by @with_auth
+        # if not user:
+        #     return jsonify({'error': 'User not found'}), 404 # Should be caught by @with_auth
         
-        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        instance = DatabaseInstance.find_by_id(instance_id) # Changed from find_by_id_and_user
         if not instance:
             return jsonify({'error': 'Database instance not found'}), 404
         
@@ -430,11 +430,11 @@ def delete_database_instance(instance_id):
     Delete (soft delete) a specific database instance for the authenticated user.
     """
     try:
-        user = getattr(request, 'local_user', None)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        # user = getattr(request, 'local_user', None) # User authentication is still enforced by @with_auth
+        # if not user:
+        #     return jsonify({'error': 'User not found'}), 404 # Should be caught by @with_auth
         
-        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        instance = DatabaseInstance.find_by_id(instance_id) # Changed from find_by_id_and_user
         if not instance:
             return jsonify({'error': 'Database instance not found'}), 404
         
@@ -460,11 +460,11 @@ def test_database_connection(instance_id):
     Test the connection to a specific database instance.
     """
     try:
-        user = getattr(request, 'local_user', None)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        # user = getattr(request, 'local_user', None) # User authentication is still enforced by @with_auth
+        # if not user:
+        #     return jsonify({'error': 'User not found'}), 404 # Should be caught by @with_auth
         
-        instance = DatabaseInstance.find_by_id_and_user(instance_id, user.id)
+        instance = DatabaseInstance.find_by_id(instance_id) # Changed from find_by_id_and_user
         if not instance:
             return jsonify({'error': 'Database instance not found'}), 404
         

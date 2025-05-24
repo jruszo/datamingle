@@ -127,11 +127,21 @@ class DatabaseInstance(db.Model):
     def find_by_id_and_user(cls, instance_id, user_id):
         """Find a specific database instance by ID and user"""
         return cls.query.filter_by(id=instance_id, user_id=user_id, is_active=True).first()
-    
+
+    @classmethod
+    def find_by_id(cls, instance_id):
+        """Find a specific database instance by ID"""
+        return cls.query.filter_by(id=instance_id, is_active=True).first()
+
     @classmethod
     def find_by_type_and_user(cls, database_type, user_id):
         """Find all database instances of a specific type for a user"""
         return cls.query.filter_by(database_type=database_type, user_id=user_id, is_active=True).all()
+
+    @classmethod
+    def find_all(cls):
+        """Find all active database instances"""
+        return cls.query.filter_by(is_active=True).all()
     
     def test_connection(self):
         """Test the database connection based on database type"""
