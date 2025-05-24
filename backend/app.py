@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 import jwt
 import requests
 from jwt import PyJWKClient
-from config.database import DatabaseConfig
+from flask import g # Added for test hook
+from .config.database import DatabaseConfig # Patched
 from datetime import datetime
 
 # Load environment variables from ../.env
@@ -24,12 +25,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = DatabaseConfig.SQLALCHEMY_TRACK_M
 app.config['SQLALCHEMY_ECHO'] = DatabaseConfig.SQLALCHEMY_ECHO
 
 # Initialize SQLAlchemy and Flask-Migrate
-from models.base import db
+from .models.base import db # Patched
 db.init_app(app)
 migrate = Migrate(app, db)
 
 # Import models after db initialization to avoid circular imports
-from models import User, DatabaseInstance
+from .models import User, DatabaseInstance # Patched
 
 # Configure CORS
 CORS(app, 
@@ -93,6 +94,14 @@ def get_or_create_user(workos_user, jwt_token):
 def with_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Test hook: If _mock_auth_user_for_testing is set on g by a test fixture, bypass auth
+        if hasattr(g, '_mock_auth_user_for_testing'):
+            request.local_user = g._mock_auth_user_for_testing
+            request.workos_user = getattr(g, '_mock_workos_user_for_testing', None)
+            request.workos_token = getattr(g, '_mock_workos_token_for_testing', None)
+            request.auth_source = getattr(g, '_mock_auth_source_for_testing', "mock_g_attr")
+            return f(*args, **kwargs)
+
         # Get access token from Authorization header
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
@@ -242,7 +251,7 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'WorkOS Flask Backend',
-        'workos_configured': bool(workos.api_key and workos.client_id),
+        'workos_configured': bool(workos._api_key and workos._client_id), # Patched
         'cors_enabled': True,
         'database_configured': bool(app.config.get('SQLALCHEMY_DATABASE_URI'))
     })

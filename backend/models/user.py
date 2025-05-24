@@ -67,6 +67,6 @@ class User(db.Model):
     
     def update_last_login(self):
         """Update the last login timestamp"""
-        from app import db
+        # Use the db imported at the module level from .base
         self.last_login_at = datetime.utcnow()
         db.session.commit() 

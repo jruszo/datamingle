@@ -147,7 +147,7 @@ class DatabaseInstance(db.Model):
             return False, f"Connection Error: {str(e)}"
         finally:
             # Update the database with the test results
-            from app import db
+            # Use the db imported at the module level from .base
             db.session.commit()
     
     def _test_mysql_connection(self):
