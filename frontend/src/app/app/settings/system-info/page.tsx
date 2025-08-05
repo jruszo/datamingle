@@ -16,35 +16,29 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
-interface BackendInfo {
-  python_version: string
+interface BackendStatus {
+  status: string
   django_version: string
-  database_engine: string
-  database_name: string
-  database_host: string
-  database_port: string
-  server_time: string
-  server_timezone: string
+  python_version: string
   platform: string
-  architecture: string
-  cpu_count: number
-  memory_total: string
-  memory_available: string
+  python_implementation: string
 }
 
 export default function SystemInfoPage() {
-  const [backendInfo, setBackendInfo] = useState<BackendInfo | null>(null)
+  const [backendInfo, setBackendInfo] = useState<BackendStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchBackendInfo = async () => {
       try {
-        const response = await fetch("/api/system-info/")
+        // Use the backend API URL from environment variables
+        const backendApiUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:8000'
+        const response = await fetch(`${backendApiUrl}/api/status/`)
         if (!response.ok) {
-          throw new Error("Failed to fetch backend system information")
+          throw new Error("Failed to fetch backend status")
         }
-        const data: BackendInfo = await response.json()
+        const data: BackendStatus = await response.json()
         setBackendInfo(data)
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -163,6 +157,12 @@ export default function SystemInfoPage() {
             
             <div className="space-y-2">
               <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <Badge variant={backendInfo?.status === "ok" ? "default" : "destructive"}>
+                  {backendInfo?.status}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Python Version</span>
                 <span>{backendInfo?.python_version}</span>
               </div>
@@ -176,62 +176,12 @@ export default function SystemInfoPage() {
 
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Database Engine</span>
-                <span>{backendInfo?.database_engine}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Database Name</span>
-                <span>{backendInfo?.database_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Host</span>
-                <span>{backendInfo?.database_host || "localhost"}</span>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Server Time</span>
-                <span className="flex items-center">
-                  <Clock className="mr-1 h-4 w-4" />
-                  {backendInfo?.server_time}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Timezone</span>
-                <span className="flex items-center">
-                  <Calendar className="mr-1 h-4 w-4" />
-                  {backendInfo?.server_timezone}
-                </span>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <div className="flex justify-between">
                 <span className="text-muted-foreground">Platform</span>
                 <span>{backendInfo?.platform}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Architecture</span>
-                <span>{backendInfo?.architecture}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">CPU Cores</span>
-                <span className="flex items-center">
-                  <Cpu className="mr-1 h-4 w-4" />
-                  {backendInfo?.cpu_count}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Memory</span>
-                <span className="flex items-center">
-                  <MemoryStick className="mr-1 h-4 w-4" />
-                  {backendInfo?.memory_available} / {backendInfo?.memory_total}
-                </span>
+                <span className="text-muted-foreground">Implementation</span>
+                <span>{backendInfo?.python_implementation}</span>
               </div>
             </div>
           </CardContent>
