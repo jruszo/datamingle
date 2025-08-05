@@ -10,7 +10,8 @@ import {
   Calendar,
   BarChart3,
   Shield,
-  Workflow
+  Workflow,
+  Server
 } from "lucide-react"
 import {
   Sidebar,
@@ -104,6 +105,11 @@ const data = {
           title: "Notification Settings",
           url: "/app/settings/notifications",
           icon: Bell,
+        },
+        {
+          title: "System Information",
+          url: "/app/settings/system-info",
+          icon: Server,
         },
       ],
     },
