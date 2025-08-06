@@ -1,163 +1,102 @@
 "use client"
 
-import { 
-  Database, 
-  FileText, 
-  Users, 
-  Settings, 
-  Bell, 
+import * as React from "react"
+import {
+  Database,
+  Server,
+  Cloud,
+  Link,
+  Key,
+  Settings,
   Home,
-  Calendar,
-  BarChart3,
-  Shield,
-  Workflow,
-  Server
 } from "lucide-react"
+
+import { NavMain } from "@/components/nav-main"
+import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarFooter,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import Link from "next/link"
 
+// This is sample data.
 const data = {
+  user: {
+    name: "shadcn",
+    email: "m@example.com",
+    avatar: "/avatars/shadcn.jpg",
+  },
   navMain: [
     {
       title: "Dashboard",
-      url: "/app",
+      url: "/dashboard",
       icon: Home,
+      isActive: true,
     },
     {
-      title: "Database Management",
-      items: [
-        {
-          title: "Database Inventory",
-          url: "/app/databases",
-          icon: Database,
-        },
-        {
-          title: "Query Executor",
-          url: "/app/queries",
-          icon: FileText,
-        },
-        {
-          title: "Data Exports",
-          url: "/app/exports",
-          icon: BarChart3,
-        },
-      ],
+      title: "Database Servers",
+      url: "/database-servers",
+      icon: Database,
     },
     {
-      title: "Requests",
-      items: [
-        {
-          title: "My Requests",
-          url: "/app/requests/my",
-          icon: FileText,
-        },
-        {
-          title: "Pending Approvals",
-          url: "/app/requests/pending",
-          icon: Calendar,
-        },
-        {
-          title: "Request History",
-          url: "/app/requests/history",
-          icon: Calendar,
-        },
-      ],
+      title: "Clusters",
+      url: "/clusters",
+      icon: Server,
     },
     {
-      title: "Administration",
-      items: [
-        {
-          title: "User Management",
-          url: "/app/admin/users",
-          icon: Users,
-        },
-        {
-          title: "Permission Requests",
-          url: "/app/admin/permissions",
-          icon: Shield,
-        },
-        {
-          title: "Audit Workflows",
-          url: "/app/admin/workflows",
-          icon: Workflow,
-        },
-      ],
+      title: "Load Balancers",
+      url: "/load-balancers",
+      icon: Cloud,
+    },
+    {
+      title: "Connections",
+      url: "/connections",
+      icon: Link,
+    },
+    {
+      title: "Shard Keys",
+      url: "/shard-keys",
+      icon: Key,
     },
     {
       title: "Settings",
-      items: [
-        {
-          title: "Profile Settings",
-          url: "/app/settings/profile",
-          icon: Settings,
-        },
-        {
-          title: "Notification Settings",
-          url: "/app/settings/notifications",
-          icon: Bell,
-        },
-        {
-          title: "System Information",
-          url: "/app/settings/system-info",
-          icon: Server,
-        },
-      ],
+      url: "#",
+      icon: Settings,
     },
   ],
 }
 
 export function AppSidebar() {
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <a href="/">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <Database className="size-4" />
+                </div>
+                <div className="flex flex-col gap-0.5 leading-none">
+                  <span className="font-semibold">DataMingle</span>
+                  <span className="">v1.0.0</span>
+                </div>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {data.navMain.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  {item.items ? (
-                    <>
-                      <SidebarMenuButton asChild>
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                      <SidebarMenu>
-                        {item.items.map((subItem) => (
-                          <SidebarMenuItem key={subItem.title}>
-                            <SidebarMenuButton asChild>
-                              <Link href={subItem.url}>
-                                <subItem.icon className="h-4 w-4" />
-                                <span>{subItem.title}</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
-                    </>
-                  ) : (
-                    <SidebarMenuButton asChild>
-                      <Link href={item.url}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  )}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <NavMain items={data.navMain} />
       </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={data.user} />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
