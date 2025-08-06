@@ -6,7 +6,7 @@ from .models import DatabaseServer, Cluster, LoadBalancer, Connection, ShardKey
 
 class ApiUrlsTestCase(APITestCase):
     def setUp(self):
-        # Create test data
+        # not all parameters are done. please fix. AI!
         self.database_server = DatabaseServer.objects.create(
             name="test-db-server"
         )
