@@ -1,32 +1,94 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_nested import routers
 from . import views
 
 app_name = 'api'
 
 # Main router
-router = routers.DefaultRouter()
+router = DefaultRouter()
 router.register(r'database-servers', views.DatabaseServerViewSet)
 router.register(r'clusters', views.ClusterViewSet)
 router.register(r'load-balancers', views.LoadBalancerViewSet)
 router.register(r'connections', views.ConnectionViewSet)
 router.register(r'shard-keys', views.ShardKeyViewSet)
 
-# Nested routers for clusters
-cluster_router = routers.NestedDefaultRouter(router, r'clusters', lookup='cluster')
-cluster_router.register(r'servers', views.ClusterServerViewSet, basename='cluster-servers')
-cluster_router.register(r'load-balancers', views.ClusterLoadBalancerViewSet, basename='cluster-load-balancers')
-cluster_router.register(r'shards', views.ShardViewSet, basename='cluster-shards')
+# Individual nested paths for clusters
+cluster_servers = views.ClusterServerViewSet.as_view({
+    'get': 'list',
+    'post': 'create'
+})
 
-# Nested routers for shards
-shard_router = routers.NestedDefaultRouter(cluster_router, r'shards', lookup='shard')
-shard_router.register(r'servers', views.ShardServerViewSet, basename='shard-servers')
-shard_router.register(r'mappings', views.ShardMappingViewSet, basename='shard-mappings')
+cluster_server_detail = views.ClusterServerViewSet.as_view({
+    'get': 'retrieve',
+    'put': 'update',
+    'patch': 'partial_update',
+    'delete': 'destroy'
+})
+
+cluster_load_balancers = views.ClusterLoadBalancerViewSet.as_view({
+    'get': 'list',
+    'post': 'create'
+})
+
+cluster_load_balancer_detail = views.ClusterLoadBalancerViewSet.as_view({
+    'get': 'retrieve',
+    'put': 'update',
+    'patch': 'partial_update',
+    'delete': 'destroy'
+})
+
+cluster_shards = views.ShardViewSet.as_view({
+    'get': 'list',
+    'post': 'create'
+})
+
+cluster_shard_detail = views.ShardViewSet.as_view({
+    'get': 'retrieve',
+    'put': 'update',
+    'patch': 'partial_update',
+    'delete': 'destroy'
+})
+
+# Individual nested paths for shards
+shard_servers = views.ShardServerViewSet.as_view({
+    'get': 'list',
+    'post': 'create'
+})
+
+shard_server_detail = views.ShardServerViewSet.as_view({
+    'get': 'retrieve',
+    'put': 'update',
+    'patch': 'partial_update',
+    'delete': 'destroy'
+})
+
+shard_mappings = views.ShardMappingViewSet.as_view({
+    'get': 'list',
+    'post': 'create'
+})
+
+shard_mapping_detail = views.ShardMappingViewSet.as_view({
+    'get': 'retrieve',
+    'put': 'update',
+    'patch': 'partial_update',
+    'delete': 'destroy'
+})
 
 urlpatterns = [
     path('status/', views.status, name='status'),
     path('', include(router.urls)),
-    path('', include(cluster_router.urls)),
-    path('', include(shard_router.urls)),
+    
+    # Cluster nested routes
+    path('clusters/<int:cluster_pk>/servers/', cluster_servers, name='cluster-servers-list'),
+    path('clusters/<int:cluster_pk>/servers/<int:pk>/', cluster_server_detail, name='cluster-servers-detail'),
+    path('clusters/<int:cluster_pk>/load-balancers/', cluster_load_balancers, name='cluster-load-balancers-list'),
+    path('clusters/<int:cluster_pk>/load-balancers/<int:pk>/', cluster_load_balancer_detail, name='cluster-load-balancers-detail'),
+    path('clusters/<int:cluster_pk>/shards/', cluster_shards, name='cluster-shards-list'),
+    path('clusters/<int:cluster_pk>/shards/<int:pk>/', cluster_shard_detail, name='cluster-shards-detail'),
+    
+    # Shard nested routes
+    path('clusters/<int:cluster_pk>/shards/<int:shard_pk>/servers/', shard_servers, name='shard-servers-list'),
+    path('clusters/<int:cluster_pk>/shards/<int:shard_pk>/servers/<int:pk>/', shard_server_detail, name='shard-servers-detail'),
+    path('clusters/<int:cluster_pk>/shards/<int:shard_pk>/mappings/', shard_mappings, name='shard-mappings-list'),
+    path('clusters/<int:cluster_pk>/shards/<int:shard_pk>/mappings/<int:pk>/', shard_mapping_detail, name='shard-mappings-detail'),
 ]
