@@ -15,6 +15,7 @@ import {
   Zap
 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { get } from "@/lib/api"
 
 interface BackendStatus {
   status: string
@@ -32,9 +33,7 @@ export default function SystemInfoPage() {
   useEffect(() => {
     const fetchBackendInfo = async () => {
       try {
-        // Use the backend API URL from environment variables
-        const backendApiUrl = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:8000'
-        const response = await fetch(`${backendApiUrl}/api/status/`)
+        const response = await get('/status/')
         if (!response.ok) {
           throw new Error("Failed to fetch backend status")
         }
