@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django import get_version
 import sys
 import platform
-from datamingle.models import (
+from .models import (
     DatabaseServer, Cluster, ClusterServer, LoadBalancer, 
     ClusterLoadBalancer, Connection, Shard, ShardServer, 
     ShardKey, ShardMapping

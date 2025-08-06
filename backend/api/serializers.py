@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from datamingle.models import (
+from .models import (
     DatabaseServer, Cluster, ClusterServer, LoadBalancer, 
     ClusterLoadBalancer, Connection, Shard, ShardServer, 
     ShardKey, ShardMapping
