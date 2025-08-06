@@ -16,31 +16,27 @@ class ApiUrlsTestCase(APITestCase):
         )
         
         self.cluster = Cluster.objects.create(
-            name="test-cluster"
-            database_type="postgresql"
+            name="test-cluster",
+            database_type="postgresql",
             replication_type="postgres_replication"
         )
         
         self.load_balancer = LoadBalancer.objects.create(
             name="test-load-balancer",
-            host="localhost",
+            hostname="localhost",
             port=8080,
             load_balancer_type="haproxy"
         )
         
         self.connection = Connection.objects.create(
             name="test-connection",
-            host="localhost",
-            port=5432,
-            database_type="postgresql",
-            username="testuser",
-            password="testpass"
+            cluster=self.cluster
         )
         
         self.shard_key = ShardKey.objects.create(
             name="test-shard-key",
-            key_type="range",
-            data_type="integer"
+            cluster=self.cluster,
+            key_fields=["id"]
         )
 
     def test_status_endpoint(self):
