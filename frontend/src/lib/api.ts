@@ -7,7 +7,7 @@ interface ApiOptions extends RequestInit {
 export async function fetchBackend(
   path: string,
   options: ApiOptions = {}
-): Promise<Response> {
+): Promise<any> {
   const { params, ...fetchOptions } = options;
   
   // Construct URL with query parameters if provided
@@ -33,7 +33,18 @@ export async function fetchBackend(
   };
 
   // Make the request
-  return fetch(url, finalOptions);
+  const response = await fetch(url, finalOptions);
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  // Try to parse JSON, fallback to text if not JSON
+  try {
+    return await response.json();
+  } catch {
+    return await response.text();
+  }
 }
 
 // Convenience methods for common HTTP verbs
