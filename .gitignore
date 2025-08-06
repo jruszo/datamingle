@@ -32,3 +32,4 @@ node_modules/
 # pycache and node modules
 *__pycache__*
 *node_modules*
+.aider*
