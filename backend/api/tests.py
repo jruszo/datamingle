@@ -45,7 +45,7 @@ class ApiUrlsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_database_servers_list(self):
-        url = reverse('api:database-server-list')
+        url = reverse('api:databaseserver-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -55,7 +55,7 @@ class ApiUrlsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_load_balancers_list(self):
-        url = reverse('api:load-balancer-list')
+        url = reverse('api:loadbalancer-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -65,7 +65,7 @@ class ApiUrlsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_shard_keys_list(self):
-        url = reverse('api:shard-key-list')
+        url = reverse('api:shardkey-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
