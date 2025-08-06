@@ -8,7 +8,7 @@ class ApiUrlsTestCase(APITestCase):
     def setUp(self):
         self.database_server = DatabaseServer.objects.create(
             name="test-db-server",
-            host="localhost",
+            hostname="localhost",
             port=5432,
             database_type="postgresql",
             username="testuser",
@@ -17,6 +17,8 @@ class ApiUrlsTestCase(APITestCase):
         
         self.cluster = Cluster.objects.create(
             name="test-cluster"
+            database_type="postgresql"
+            replication_type="postgres_replication"
         )
         
         self.load_balancer = LoadBalancer.objects.create(
