@@ -15,7 +15,7 @@ import {
   Cloud,
   Key
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { get, post, put, del } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -60,8 +60,8 @@ export default function ClustersPage() {
 
   const fetchClusters = async () => {
     try {
-      const response = await api.get('/api/clusters/');
-      setClusters(response.data.results || response.data);
+      const response = await get('/clusters/');
+      setClusters(response.results || response);
     } catch (error) {
       console.error('Error fetching clusters:', error);
     } finally {
@@ -71,7 +71,7 @@ export default function ClustersPage() {
 
   const handleCreate = async () => {
     try {
-      await api.post('/api/clusters/', formData);
+      await post('/clusters/', formData);
       setIsModalOpen(false);
       resetForm();
       fetchClusters();
@@ -82,7 +82,7 @@ export default function ClustersPage() {
 
   const handleUpdate = async () => {
     try {
-      await api.put(`/api/clusters/${editingCluster.id}/`, formData);
+      await put(`/clusters/${editingCluster.id}/`, formData);
       setIsModalOpen(false);
       resetForm();
       fetchClusters();
@@ -94,7 +94,7 @@ export default function ClustersPage() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this cluster?')) {
       try {
-        await api.delete(`/api/clusters/${id}/`);
+        await del(`/clusters/${id}/`);
         fetchClusters();
         if (selectedCluster?.id === id) {
           setSelectedCluster(null);

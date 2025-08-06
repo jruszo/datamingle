@@ -12,7 +12,7 @@ import {
   Trash2, 
   Search
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { get, post, put, del } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -51,8 +51,8 @@ export default function LoadBalancersPage() {
 
   const fetchLoadBalancers = async () => {
     try {
-      const response = await api.get('/api/load-balancers/');
-      setLoadBalancers(response.data.results || response.data);
+      const response = await get('/load-balancers/');
+      setLoadBalancers(response.results || response);
     } catch (error) {
       console.error('Error fetching load balancers:', error);
     } finally {
@@ -62,7 +62,7 @@ export default function LoadBalancersPage() {
 
   const handleCreate = async () => {
     try {
-      await api.post('/api/load-balancers/', formData);
+      await post('/load-balancers/', formData);
       setIsModalOpen(false);
       resetForm();
       fetchLoadBalancers();
@@ -73,7 +73,7 @@ export default function LoadBalancersPage() {
 
   const handleUpdate = async () => {
     try {
-      await api.put(`/api/load-balancers/${editingLoadBalancer.id}/`, formData);
+      await put(`/load-balancers/${editingLoadBalancer.id}/`, formData);
       setIsModalOpen(false);
       resetForm();
       fetchLoadBalancers();
@@ -85,7 +85,7 @@ export default function LoadBalancersPage() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this load balancer?')) {
       try {
-        await api.delete(`/api/load-balancers/${id}/`);
+        await del(`/load-balancers/${id}/`);
         fetchLoadBalancers();
       } catch (error) {
         console.error('Error deleting load balancer:', error);

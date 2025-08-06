@@ -12,7 +12,7 @@ import {
   Trash2, 
   Search
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { get, post, put, del } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -50,8 +50,8 @@ export default function ConnectionsPage() {
 
   const fetchConnections = async () => {
     try {
-      const response = await api.get('/api/connections/');
-      setConnections(response.data.results || response.data);
+      const response = await get('/connections/');
+      setConnections(response.results || response);
     } catch (error) {
       console.error('Error fetching connections:', error);
     } finally {
@@ -61,8 +61,8 @@ export default function ConnectionsPage() {
 
   const fetchClusters = async () => {
     try {
-      const response = await api.get('/api/clusters/');
-      setClusters(response.data.results || response.data);
+      const response = await get('/clusters/');
+      setClusters(response.results || response);
     } catch (error) {
       console.error('Error fetching clusters:', error);
     } finally {
@@ -76,7 +76,7 @@ export default function ConnectionsPage() {
         ...formData,
         cluster: formData.cluster ? parseInt(formData.cluster) : null
       };
-      await api.post('/api/connections/', data);
+      await post('/connections/', data);
       setIsModalOpen(false);
       resetForm();
       fetchConnections();
@@ -91,7 +91,7 @@ export default function ConnectionsPage() {
         ...formData,
         cluster: formData.cluster ? parseInt(formData.cluster) : null
       };
-      await api.put(`/api/connections/${editingConnection.id}/`, data);
+      await put(`/connections/${editingConnection.id}/`, data);
       setIsModalOpen(false);
       resetForm();
       fetchConnections();
@@ -103,7 +103,7 @@ export default function ConnectionsPage() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this connection?')) {
       try {
-        await api.delete(`/api/connections/${id}/`);
+        await del(`/connections/${id}/`);
         fetchConnections();
       } catch (error) {
         console.error('Error deleting connection:', error);

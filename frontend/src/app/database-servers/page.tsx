@@ -13,7 +13,7 @@ import {
   Search,
   Server
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { get, post, put, del } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -54,8 +54,8 @@ export default function DatabaseServersPage() {
 
   const fetchServers = async () => {
     try {
-      const response = await api.get('/api/database-servers/');
-      setServers(response.data.results || response.data);
+      const response = await get('/database-servers/');
+      setServers(response.results || response);
     } catch (error) {
       console.error('Error fetching database servers:', error);
     } finally {
@@ -65,7 +65,7 @@ export default function DatabaseServersPage() {
 
   const handleCreate = async () => {
     try {
-      await api.post('/api/database-servers/', formData);
+      await post('/database-servers/', formData);
       setIsModalOpen(false);
       resetForm();
       fetchServers();
@@ -76,7 +76,7 @@ export default function DatabaseServersPage() {
 
   const handleUpdate = async () => {
     try {
-      await api.put(`/api/database-servers/${editingServer.id}/`, formData);
+      await put(`/database-servers/${editingServer.id}/`, formData);
       setIsModalOpen(false);
       resetForm();
       fetchServers();
@@ -88,7 +88,7 @@ export default function DatabaseServersPage() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this database server?')) {
       try {
-        await api.delete(`/api/database-servers/${id}/`);
+        await del(`/database-servers/${id}/`);
         fetchServers();
       } catch (error) {
         console.error('Error deleting database server:', error);

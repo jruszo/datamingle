@@ -12,7 +12,7 @@ import {
   Trash2, 
   Search
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { get, post, put, del } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -53,8 +53,8 @@ export default function ShardKeysPage() {
 
   const fetchShardKeys = async () => {
     try {
-      const response = await api.get('/api/shard-keys/');
-      setShardKeys(response.data.results || response.data);
+      const response = await get('/shard-keys/');
+      setShardKeys(response.results || response);
     } catch (error) {
       console.error('Error fetching shard keys:', error);
     } finally {
@@ -64,8 +64,8 @@ export default function ShardKeysPage() {
 
   const fetchClusters = async () => {
     try {
-      const response = await api.get('/api/clusters/');
-      setClusters(response.data.results || response.data);
+      const response = await get('/clusters/');
+      setClusters(response.results || response);
     } catch (error) {
       console.error('Error fetching clusters:', error);
     } finally {
@@ -80,7 +80,7 @@ export default function ShardKeysPage() {
         cluster: formData.cluster ? parseInt(formData.cluster) : null,
         key_fields: formData.key_fields.split(',').map(field => field.trim()).filter(field => field)
       };
-      await api.post('/api/shard-keys/', data);
+      await post('/shard-keys/', data);
       setIsModalOpen(false);
       resetForm();
       fetchShardKeys();
@@ -96,7 +96,7 @@ export default function ShardKeysPage() {
         cluster: formData.cluster ? parseInt(formData.cluster) : null,
         key_fields: formData.key_fields.split(',').map(field => field.trim()).filter(field => field)
       };
-      await api.put(`/api/shard-keys/${editingShardKey.id}/`, data);
+      await put(`/shard-keys/${editingShardKey.id}/`, data);
       setIsModalOpen(false);
       resetForm();
       fetchShardKeys();
@@ -108,7 +108,7 @@ export default function ShardKeysPage() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this shard key?')) {
       try {
-        await api.delete(`/api/shard-keys/${id}/`);
+        await del(`/shard-keys/${id}/`);
         fetchShardKeys();
       } catch (error) {
         console.error('Error deleting shard key:', error);
