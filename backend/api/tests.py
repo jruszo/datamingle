@@ -6,9 +6,13 @@ from .models import DatabaseServer, Cluster, LoadBalancer, Connection, ShardKey
 
 class ApiUrlsTestCase(APITestCase):
     def setUp(self):
-        # not all parameters are done. please fix. AI!
         self.database_server = DatabaseServer.objects.create(
-            name="test-db-server"
+            name="test-db-server",
+            host="localhost",
+            port=5432,
+            database_type="postgresql",
+            username="testuser",
+            password="testpass"
         )
         
         self.cluster = Cluster.objects.create(
@@ -16,15 +20,25 @@ class ApiUrlsTestCase(APITestCase):
         )
         
         self.load_balancer = LoadBalancer.objects.create(
-            name="test-load-balancer"
+            name="test-load-balancer",
+            host="localhost",
+            port=8080,
+            load_balancer_type="haproxy"
         )
         
         self.connection = Connection.objects.create(
-            name="test-connection"
+            name="test-connection",
+            host="localhost",
+            port=5432,
+            database_type="postgresql",
+            username="testuser",
+            password="testpass"
         )
         
         self.shard_key = ShardKey.objects.create(
-            name="test-shard-key"
+            name="test-shard-key",
+            key_type="range",
+            data_type="integer"
         )
 
     def test_status_endpoint(self):
