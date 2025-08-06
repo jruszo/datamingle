@@ -11,8 +11,8 @@ import {
   Home,
 } from "lucide-react"
 
-import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/app/app/components/nav-main"
+import { NavUser } from "@/app/app/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -22,7 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/app/app/components/ui/sidebar"
 
 // This is sample data.
 const data = {
@@ -34,33 +34,33 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: "/app/dashboard",
       icon: Home,
       isActive: true,
     },
     {
       title: "Database Servers",
-      url: "/database-servers",
+      url: "/app/database-servers",
       icon: Database,
     },
     {
       title: "Clusters",
-      url: "/clusters",
+      url: "/app/clusters",
       icon: Server,
     },
     {
       title: "Load Balancers",
-      url: "/load-balancers",
+      url: "/app/load-balancers",
       icon: Cloud,
     },
     {
       title: "Connections",
-      url: "/connections",
+      url: "/app/connections",
       icon: Link,
     },
     {
       title: "Shard Keys",
-      url: "/shard-keys",
+      url: "/app/shard-keys",
       icon: Key,
     },
     {
@@ -78,7 +78,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/">
+              <a href="/app">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <Database className="size-4" />
                 </div>
