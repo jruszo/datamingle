@@ -3,10 +3,6 @@
 import * as React from "react"
 import {
   Database,
-  Server,
-  Cloud,
-  Link,
-  Key,
   Settings,
   Home,
 } from "lucide-react"
@@ -42,21 +38,6 @@ const data = {
       title: "Database Servers",
       url: "/app/database-servers",
       icon: Database,
-    },
-    {
-      title: "Load Balancers",
-      url: "/app/load-balancers",
-      icon: Cloud,
-    },
-    {
-      title: "Connections",
-      url: "/app/connections",
-      icon: Link,
-    },
-    {
-      title: "Shard Keys",
-      url: "/app/shard-keys",
-      icon: Key,
     },
     {
       title: "Settings",
