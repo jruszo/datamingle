@@ -10,8 +10,7 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  Search,
-  Server
+  Search
 } from 'lucide-react';
 import { get, post, put, del } from '@/lib/api';
 import {
@@ -143,7 +142,7 @@ export default function DatabaseServersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Database Servers</h1>
-          <p className="text-muted-foreground">Manage your database servers</p>
+          <p className="text-muted-foreground">Manage your standalone database servers</p>
         </div>
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogTrigger asChild>
@@ -268,7 +267,6 @@ export default function DatabaseServersPage() {
                 <TableHead>Hostname</TableHead>
                 <TableHead>Port</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -280,9 +278,6 @@ export default function DatabaseServersPage() {
                   <TableCell>{server.port}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{server.database_type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">Active</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

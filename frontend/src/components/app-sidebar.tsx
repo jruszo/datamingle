@@ -44,11 +44,6 @@ const data = {
       icon: Database,
     },
     {
-      title: "Clusters",
-      url: "/app/clusters",
-      icon: Server,
-    },
-    {
       title: "Load Balancers",
       url: "/app/load-balancers",
       icon: Cloud,
